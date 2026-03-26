@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,3 +40,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# scratch and scripts
+create_admin.js
+fix_enc.js
+test_rpc.js
+supabase_seed.sql
+supabase_setup.sql
+*.log
+.agents/

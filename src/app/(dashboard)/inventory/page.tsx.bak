@@ -1,0 +1,841 @@
+"use client";
+
+import { useState } from "react";
+import { Plus, Search, Filter, AlertTriangle, Box, DollarSign, X, Trash2, Users } from "lucide-react";
+
+// Mock Data
+const initialInventory = [
+  { sku: "M-SOC-01", name: "Sữa Marigold Socola", spec: "Thùng (24 hộp)", stock: 150, price: 250000, daysToReorder: 8, expDate: "2026-04-15" },
+  { sku: "M-DAU-01", name: "Sữa Marigold Dâu", spec: "Thùng (24 hộp)", stock: 80, price: 250000, daysToReorder: 9, expDate: "2026-08-20" },
+  { sku: "M-TAO-01", name: "Nước ép Marigold Táo", spec: "Thùng (24 hộp)", stock: 45, price: 220000, daysToReorder: -3.2, expDate: "2026-03-30" },
+  { sku: "M-CAM-01", name: "Nước ép Marigold Cam", spec: "Thùng (24 hộp)", stock: 200, price: 220000, daysToReorder: 4.3, expDate: "2026-05-10" },
+  { sku: "M-ITD-01", name: "Sữa Marigold Ít Đường", spec: "Thùng (24 hộp)", stock: 120, price: 260000, daysToReorder: 13, expDate: "2026-12-01" },
+];
+
+const initialOrders = [
+  { id: "PO-2026-001", supplier: "Công ty Kim Anh", qty: 50, spec: "Thùng", price: 25000000, date: "2026-03-01", status: "Hàng chờ về", items: [{ productId: "M-SOC-01", qty: 50, price: 250000 }] },
+  { id: "PO-2026-002", supplier: "Đại lý Marigold", qty: 100, spec: "Thùng", price: 22000000, date: "2026-03-02", status: "Hàng chờ về", items: [{ productId: "M-CAM-01", qty: 100, price: 220000 }] },
+  { id: "PO-2026-003", supplier: "Nhà PP Miền Đông", qty: 150, spec: "Thùng", price: 37500000, date: "2026-03-03", status: "Đã nhập kho", items: [{ productId: "M-SOC-01", qty: 150, price: 250000 }] },
+];
+
+const initialSuppliers = [
+  { id: "NCC-001", name: "Công ty Kim Anh", contact: "0901234567", category: "Thực phẩm", address: "TP.HCM", debt: 15000000, status: "Đang hợp tác" },
+  { id: "NCC-002", name: "Đại lý Marigold", contact: "0912345678", category: "Đồ uống", address: "Hà Nội", debt: 0, status: "Đang hợp tác" },
+  { id: "NCC-003", name: "Nhà PP Miền Đông", contact: "0987654321", category: "Đồ uống", address: "Bình Dương", debt: 4500000, status: "Ngừng hợp tác" },
+];
+
+export default function InventoryPage() {
+  const [activeTab, setActiveTab] = useState<"inventory" | "orders" | "suppliers" | "settings">("inventory");
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const [isAddingSupplier, setIsAddingSupplier] = useState(false);
+  const [isCreatingPO, setIsCreatingPO] = useState(false);
+  const [isReceivingStock, setIsReceivingStock] = useState(false);
+  const [editingPO, setEditingPO] = useState<any>(null);
+  const [receiveTab, setReceiveTab] = useState<"manual" | "from_po">("manual");
+
+  // States
+  const [inventory] = useState(initialInventory);
+  const [orders, setOrders] = useState(initialOrders);
+
+  // PO Creation State
+  const [poItems, setPoItems] = useState([
+    { id: 1, productId: "M-DAU-01", qty: 10, price: 250000 },
+    { id: 2, productId: "M-TAO-01", qty: 20, price: 220000 },
+  ]);
+
+  // Stock Receive State (GRN)
+  const [grnItems, setGrnItems] = useState([
+    { id: 1, productId: "", qty: 1, price: 0, expDate: "" },
+  ]);
+
+  const addGrnItem = () => {
+    setGrnItems([...grnItems, { id: Date.now(), productId: "", qty: 1, price: 0, expDate: "" }]);
+  };
+
+  const updateGrnItem = (id: number, field: string, value: any) => {
+    setGrnItems(grnItems.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const removeGrnItem = (id: number) => {
+    if (grnItems.length > 1) {
+      setGrnItems(grnItems.filter(item => item.id !== id));
+    }
+  };
+
+  const totalGrnAmount = grnItems.reduce((sum, item) => sum + (item.qty * item.price), 0);
+
+  const addPoItem = () => {
+    setPoItems([...poItems, { id: Date.now(), productId: inventory[0].sku, qty: 1, price: inventory[0].price }]);
+  };
+
+  const updatePoItem = (id: number, field: string, value: any) => {
+    setPoItems(poItems.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const removePoItem = (id: number) => {
+    if (poItems.length > 1) {
+      setPoItems(poItems.filter(item => item.id !== id));
+    }
+  };
+
+  const totalPoAmount = poItems.reduce((sum, item) => sum + (item.qty * item.price), 0);
+
+  // New PO Logic
+  const handleCreatePO = () => {
+    const year = new Date().getFullYear();
+    const stt = String(orders.length + 1).padStart(3, '0');
+    const newId = `PO-${year}-${stt}`;
+    const newOrder = {
+      id: newId,
+      supplier: "Nhà cung cấp mới",
+      qty: poItems.reduce((s, i) => s + i.qty, 0),
+      spec: "Thùng",
+      price: totalPoAmount,
+      date: new Date().toISOString().split('T')[0],
+      status: "Hàng chờ về",
+      items: poItems
+    };
+    setOrders([newOrder, ...orders]);
+    setIsCreatingPO(false);
+  };
+
+  // Formatting helpers
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  };
+
+  const getRopColor = (days: number) => {
+    if (days < 2) return "text-red-600 font-medium";
+    if (days <= 7) return "text-orange-500 font-medium";
+    return "text-green-600 font-medium";
+  };
+
+  return (
+    <div className="flex flex-col h-full space-y-6 relative">
+      {/* Header & Buttons */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Quản lý Kho hàng & Sản phẩm</h1>
+        <div className="flex items-center gap-3">
+          {activeTab === "inventory" && (
+            <>
+              <button 
+                onClick={() => setIsCreatingPO(true)}
+                className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Tạo đơn nhập hàng
+              </button>
+              <button 
+                onClick={() => setIsAddingProduct(true)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Thêm sản phẩm mới
+              </button>
+            </>
+          )}
+          {activeTab === "suppliers" && (
+            <button 
+              onClick={() => setIsAddingSupplier(true)}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              Thêm nhà cung cấp
+            </button>
+          )}
+          {activeTab === "orders" && (
+            <>
+              <button 
+                onClick={() => setIsCreatingPO(true)}
+                className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Tạo đơn nhập hàng
+              </button>
+              <button 
+                onClick={() => setIsReceivingStock(true)}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Nhập kho mới
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex items-center space-x-6 border-b border-gray-200">
+        <button 
+          onClick={() => setActiveTab("inventory")}
+          className={`pb-3 border-b-2 font-medium text-sm transition-colors ${activeTab === "inventory" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+        >
+          <div className="flex items-center gap-2">
+            <Box className="w-4 h-4" />
+            Tồn kho thực tế
+          </div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("orders")}
+          className={`pb-3 border-b-2 font-medium text-sm transition-colors ${activeTab === "orders" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+        >
+          Đặt hàng
+        </button>
+        <button 
+          onClick={() => setActiveTab("suppliers")}
+          className={`pb-3 border-b-2 font-medium text-sm transition-colors ${activeTab === "suppliers" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+        >
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Nhà cung cấp
+          </div>
+        </button>
+        <button 
+          onClick={() => setActiveTab("settings")}
+          className={`pb-3 border-b-2 font-medium text-sm transition-colors ${activeTab === "settings" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+        >
+          Cài đặt kho
+        </button>
+      </div>
+
+      {/* --- TAB: Tồn kho thực tế --- */}
+      {activeTab === "inventory" && (
+        <div className="flex flex-col space-y-6 flex-1">
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+             <div className="relative w-full sm:w-96">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm SKU, tên sản phẩm..."
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                />
+             </div>
+             <button className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 font-medium shadow-sm transition-colors w-max">
+                <Filter className="w-4 h-4" />
+                Lọc
+             </button>
+          </div>
+
+          {/* KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-6">
+                <span className="text-sm font-medium text-gray-500">Tổng SKU</span>
+                <Box className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900">12</div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-sm font-medium text-gray-500">Hàng sắp hết hạn</span>
+                <AlertTriangle className="w-5 h-5 text-orange-500" />
+              </div>
+              <div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">3</div>
+                <div className="text-xs text-gray-500">Dưới 3 tháng</div>
+              </div>
+            </div>
+
+            <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm flex flex-col justify-between">
+               <div className="flex justify-between items-start mb-6">
+                <span className="text-sm font-medium text-gray-500">Tổng giá trị tồn kho</span>
+                <DollarSign className="w-5 h-5 text-gray-400" />
+              </div>
+              <div className="text-3xl font-bold text-gray-900">500,000,000 đ</div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-1">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4">SKU</th>
+                    <th className="px-6 py-4">Tên sản phẩm</th>
+                    <th className="px-6 py-4">Quy cách</th>
+                    <th className="px-6 py-4">Tồn kho</th>
+                    <th className="px-6 py-4">Giá nhập</th>
+                    <th className="px-6 py-4 text-center">Ngày đến hạn đặt (ROP)</th>
+                    <th className="px-6 py-4">Hạn sử dụng</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {inventory.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 font-medium text-blue-600">{item.sku}</td>
+                      <td className="px-6 py-4 text-gray-900 font-medium">{item.name}</td>
+                      <td className="px-6 py-4 text-gray-500">{item.spec}</td>
+                      <td className="px-6 py-4 font-bold text-gray-900">{item.stock}</td>
+                      <td className="px-6 py-4 text-gray-600">{formatCurrency(item.price)}</td>
+                      <td className={`px-6 py-4 text-center ${getRopColor(item.daysToReorder)}`}>
+                        {item.daysToReorder} ngày
+                      </td>
+                      <td className={`px-6 py-4 text-gray-600 font-medium ${item.expDate === '2026-03-30' ? 'text-red-500' : ''}`}>{item.expDate}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB: Đặt hàng --- */}
+      {activeTab === "orders" && (
+        <div className="flex flex-col space-y-6 flex-1">
+          <div className="flex flex-col sm:flex-row gap-3">
+             <div className="relative w-full sm:w-96">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm mã đơn..."
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm"
+                />
+             </div>
+             <button className="flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50 font-medium shadow-sm transition-colors w-max">
+                <Filter className="w-4 h-4" />
+                Lọc
+             </button>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden flex-1">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-100">
+                  <tr>
+                    <th className="px-6 py-4">Mã đơn</th>
+                    <th className="px-6 py-4">Nhà cung cấp</th>
+                    <th className="px-6 py-4">Số lượng</th>
+                    <th className="px-6 py-4">Quy cách</th>
+                    <th className="px-6 py-4">Tổng tiền</th>
+                    <th className="px-6 py-4">Ngày tạo</th>
+                    <th className="px-6 py-4">Trạng thái</th>
+                    <th className="px-6 py-4 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {orders.map((order, idx) => (
+                    <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                      <td 
+                        onClick={() => setEditingPO(order)}
+                        className="px-6 py-4 font-bold text-blue-600 cursor-pointer hover:underline"
+                      >
+                        {order.id}
+                      </td>
+                      <td className="px-6 py-4 text-gray-900 font-medium">{order.supplier}</td>
+                      <td className="px-6 py-4 font-bold text-gray-900">{order.qty}</td>
+                      <td className="px-6 py-4 text-gray-500">{order.spec}</td>
+                      <td className="px-6 py-4 text-gray-600 font-medium">{formatCurrency(order.price).replace('VND', 'đ')}</td>
+                      <td className="px-6 py-4 text-gray-500">{order.date}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${order.status === 'Hàng chờ về' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
+                          {order.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right flex justify-end gap-2">
+                        {order.status === 'Hàng chờ về' && (
+                          <>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setIsReceivingStock(true); setReceiveTab("from_po"); }}
+                              className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                            >
+                              Nhập kho
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setEditingPO(order); }}
+                              className="bg-white border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-1.5 rounded text-xs font-medium transition-colors"
+                            >
+                              Sửa
+                            </button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB: Cài đặt kho --- */}
+      {activeTab === "settings" && (
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 max-w-4xl">
+           <h2 className="text-lg font-bold text-gray-900 mb-6">Cài đặt thông số kho hàng</h2>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+             <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Thời gian nhập hàng trung bình (ngày)</label>
+                <input type="number" defaultValue={5} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <p className="text-xs text-gray-500 mt-1">Thời gian trung bình từ lúc lên đơn đến khi hàng nhập kho</p>
+             </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Thời gian nhập hàng lâu nhất (ngày)</label>
+                <input type="number" defaultValue={10} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+             </div>
+
+             <div className="col-span-1 md:col-span-2 border-t border-gray-100 my-2 pt-4"></div>
+
+             <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Dung tích kho tối đa</label>
+                <input type="number" defaultValue={10000} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <p className="text-xs text-gray-500 mt-1">Tránh trường hợp đặt quá nhiều dẫn đến quá tải sức chứa của kho</p>
+             </div>
+             <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Đơn vị vận chuyển tối thiểu (MOQ)</label>
+                <input type="number" defaultValue={100} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <p className="text-xs text-gray-500 mt-1">Ví dụ: Phải đủ 1 container hoặc tối thiểu 10 pallet/loại</p>
+             </div>
+
+             <div className="col-span-1 md:col-span-2 border-t border-gray-100 my-2 pt-4"></div>
+
+             <div>
+                <label className="block text-sm font-medium text-gray-900 mb-1">Chi phí lưu kho (VNĐ/đơn vị)</label>
+                <input type="number" defaultValue={5000} className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                <p className="text-xs text-gray-500 mt-1">Để tính toán xem lượng đặt mỗi lần (Q) là bao nhiêu thì rẻ nhất</p>
+             </div>
+           </div>
+
+           <div className="mt-8">
+              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition-colors">
+                Lưu cài đặt
+              </button>
+           </div>
+        </div>
+      )}
+
+      {/* --- Modal Tạo đơn nhập hàng mới --- */}
+      {isCreatingPO && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col relative animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="px-6 py-5 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Tạo đơn nhập hàng mới</h2>
+              <button 
+                onClick={() => setIsCreatingPO(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="px-6 pb-6 overflow-y-auto">
+              {/* Product Table Container */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden mb-6">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50/80 text-gray-500 font-medium border-b border-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 min-w-[200px]">Sản phẩm</th>
+                      <th className="px-4 py-3 w-32 text-center">Số lượng</th>
+                      <th className="px-4 py-3 w-44 text-center">Giá nhập/đơn vị</th>
+                      <th className="px-4 py-3 w-44 text-right">Thành tiền</th>
+                      <th className="px-4 py-3 w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {poItems.map((item) => (
+                      <tr key={item.id} className="group">
+                        <td className="px-4 py-3">
+                          <select 
+                            value={item.productId}
+                            onChange={(e) => updatePoItem(item.id, 'productId', e.target.value)}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                          >
+                            {inventory.map(p => (
+                              <option key={p.sku} value={p.sku}>{p.name}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3">
+                          <input 
+                            type="number" 
+                            min="1"
+                            value={item.qty}
+                            onChange={(e) => updatePoItem(item.id, 'qty', parseInt(e.target.value) || 0)}
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-center outline-none focus:ring-2 focus:ring-blue-500" 
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="relative">
+                            <input 
+                              type="number" 
+                              value={item.price}
+                              onChange={(e) => updatePoItem(item.id, 'price', parseInt(e.target.value) || 0)}
+                              className="w-full pl-3 pr-8 py-2 bg-white border border-gray-200 rounded-lg text-right outline-none focus:ring-2 focus:ring-blue-500 shadow-sm" 
+                            />
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-medium">đ</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-right font-bold text-gray-900">
+                          {formatCurrency(item.qty * item.price).replace('VND', 'đ')}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button 
+                            onClick={() => removePoItem(item.id)}
+                            className="text-gray-300 hover:text-red-500 transition-colors p-1"
+                            disabled={poItems.length === 1}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <button 
+                  onClick={addPoItem}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50/50 hover:bg-blue-50 px-4 py-2.5 rounded-xl transition-colors border border-blue-100"
+                >
+                  <Plus className="w-4 h-4" />
+                  Thêm sản phẩm
+                </button>
+
+                <div className="flex items-center gap-4 text-gray-500">
+                   <span className="text-sm">Tổng tiền nhập hàng:</span>
+                   <span className="text-2xl font-black text-blue-600">
+                     {formatCurrency(totalPoAmount).replace('VND', 'đ')}
+                   </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-5 border-t border-gray-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsCreatingPO(false)}
+                className="px-8 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl hover:bg-gray-50 font-bold transition-colors"
+              >
+                Hủy
+              </button>
+              <button 
+                onClick={handleCreatePO}
+                className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-sm"
+              >
+                Tạo đơn hàng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Modal Nhập kho sản phẩm --- */}
+      {isReceivingStock && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col relative animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="px-6 pt-5 pb-2">
+              <div className="flex items-center justify-between mb-1">
+                <h2 className="text-xl font-bold text-gray-900">Nhập kho sản phẩm</h2>
+                <button 
+                  onClick={() => setIsReceivingStock(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <p className="text-sm text-gray-500">Nhập thông tin lô hàng mới vào kho hoặc nhập từ đơn đặt hàng.</p>
+            </div>
+
+            {/* Sub-Tabs */}
+            <div className="px-6 flex items-center border-b border-gray-100">
+              <button 
+                onClick={() => setReceiveTab("manual")}
+                className={`flex-1 py-3 text-sm font-bold transition-colors border-b-2 ${receiveTab === "manual" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
+              >
+                Nhập mới
+              </button>
+              <button 
+                onClick={() => setReceiveTab("from_po")}
+                className={`flex-1 py-3 text-sm font-bold transition-colors border-b-2 ${receiveTab === "from_po" ? "border-blue-600 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}
+              >
+                Theo đơn đã đặt
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="px-6 py-6 overflow-y-auto flex-1">
+              {receiveTab === "manual" ? (
+                <>
+                  <div className="border border-gray-200 rounded-xl overflow-hidden mb-6">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-gray-50/80 text-gray-500 font-medium border-b border-gray-100">
+                        <tr>
+                          <th className="px-4 py-3 min-w-[180px]">Sản phẩm</th>
+                          <th className="px-4 py-3 w-20 text-center">SL</th>
+                          <th className="px-4 py-3 w-36 text-center">Giá nhập/đơn vị</th>
+                          <th className="px-4 py-3 w-40 text-center">Hạn sử dụng</th>
+                          <th className="px-4 py-3 w-32 text-right">Thành tiền</th>
+                          <th className="px-4 py-3 w-10"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {grnItems.map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-4 py-3">
+                              <select 
+                                value={item.productId}
+                                onChange={(e) => updateGrnItem(item.id, 'productId', e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
+                              >
+                                <option value="">Chọn SP</option>
+                                {inventory.map(p => (
+                                  <option key={p.sku} value={p.sku}>{p.name}</option>
+                                ))}
+                              </select>
+                            </td>
+                            <td className="px-4 py-3">
+                              <input 
+                                type="number" 
+                                min="1"
+                                value={item.qty}
+                                onChange={(e) => updateGrnItem(item.id, 'qty', parseInt(e.target.value) || 0)}
+                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-center outline-none focus:ring-2 focus:ring-blue-500" 
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                              <input 
+                                type="number" 
+                                value={item.price}
+                                onChange={(e) => updateGrnItem(item.id, 'price', parseInt(e.target.value) || 0)}
+                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-center outline-none focus:ring-2 focus:ring-blue-500" 
+                              />
+                            </td>
+                            <td className="px-4 py-3">
+                               <input 
+                                type="date" 
+                                value={item.expDate}
+                                onChange={(e) => updateGrnItem(item.id, 'expDate', e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-right font-bold text-gray-900">
+                               {formatCurrency(item.qty * item.price).replace('VND', 'đ')}
+                            </td>
+                            <td className="px-4 py-3">
+                              {grnItems.length > 1 && (
+                                <button onClick={() => removeGrnItem(item.id)} className="text-gray-300 hover:text-red-500">
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
+                    <button 
+                      onClick={addGrnItem}
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50/50 hover:bg-blue-50 px-4 py-2 rounded-xl transition-colors border border-blue-100"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Thêm sản phẩm
+                    </button>
+                    <div className="flex items-center gap-2 text-gray-500">
+                       <span className="text-sm">Tổng tiền nhập hàng:</span>
+                       <span className="text-xl font-black text-blue-600">
+                         {formatCurrency(totalGrnAmount).replace('VND', 'đ')}
+                       </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-900">Ghi chú chung</label>
+                    <textarea 
+                      placeholder="Ghi các chi tiết phát sinh..."
+                      className="w-full p-4 bg-white border border-gray-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 h-24"
+                    />
+                  </div>
+                </>
+              ) : (
+                <div className="space-y-6 min-h-[300px]">
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-900">Chọn đơn hàng đang chờ về</label>
+                    <select className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer">
+                      <option value="">Chọn mã đơn hàng...</option>
+                      {orders.filter(o => o.status === 'Hàng chờ về').map(o => (
+                        <option key={o.id} value={o.id}>{o.id} - {o.supplier} ({o.qty} {o.spec})</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-bold text-gray-900">Ghi chú</label>
+                    <textarea 
+                      placeholder="Ghi các chi tiết phát sinh..."
+                      className="w-full p-4 bg-white border border-gray-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-blue-500 h-32"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-5 border-t border-gray-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setIsReceivingStock(false)}
+                className="px-8 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl font-bold transition-colors"
+              >
+                Hủy
+              </button>
+              <button 
+                className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-sm"
+              >
+                 Xác nhận nhập kho
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Modal Thêm sản phẩm mới --- --- --- */}
+      {isAddingProduct && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col relative animate-in fade-in zoom-in duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Thêm sản phẩm mới</h2>
+              <button 
+                onClick={() => setIsAddingProduct(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6 overflow-y-auto">
+              <form className="space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">SKU / Mã sản phẩm <span className="text-red-500">*</span></label>
+                    <input type="text" placeholder="VD: M-SOC-02" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Tên sản phẩm <span className="text-red-500">*</span></label>
+                    <input type="text" placeholder="Nhập tên sản phẩm" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700">Quy cách đóng gói <span className="text-red-500">*</span></label>
+                  <input type="text" placeholder="VD: Thùng (24 hộp), Lốc (6 chai)..." className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2 border-t border-gray-100">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Giá nhập dự kiến (VNĐ)</label>
+                    <input type="number" placeholder="0" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Giá bán dự kiến (VNĐ)</label>
+                    <input type="number" placeholder="0" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2 border-t border-gray-100">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      Tồn kho an toàn
+                    </label>
+                    <input type="number" placeholder="VD: 50" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      Tồn kho tối đa
+                    </label>
+                    <input type="number" placeholder="VD: 500" className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                      Mức độ phục vụ (%)
+                    </label>
+                    <input type="number" defaultValue={100} min={1} max={100} className="w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+              </form>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50 flex justify-end gap-3 rounded-b-xl">
+              <button 
+                onClick={() => setIsAddingProduct(false)}
+                className="px-5 py-2.5 border border-gray-200 bg-white text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+              >
+                Hủy bỏ
+              </button>
+              <button className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
+                Lưu sản phẩm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Modal Xem/Sửa đơn đặt hàng --- */}
+      {editingPO && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col relative animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Chi tiết đơn {editingPO.id}</h2>
+              <button onClick={() => setEditingPO(null)} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 font-medium text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                 <div className="space-y-1">
+                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Nhà cung cấp</label>
+                   <input defaultValue={editingPO.supplier} readOnly className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-medium text-gray-900" />
+                 </div>
+                 <div className="space-y-1">
+                   <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Ngày tạo đơn</label>
+                   <div className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg font-medium text-gray-500">{editingPO.date}</div>
+                 </div>
+              </div>
+
+              <div className="border border-gray-200 rounded-xl overflow-hidden mb-6">
+                <table className="w-full text-left">
+                  <thead className="bg-gray-50 text-gray-500 font-medium border-b border-gray-100 text-xs">
+                    <tr><th className="px-4 py-3">Sản phẩm</th><th className="px-4 py-3 text-center">SL</th><th className="px-4 py-3 text-center">Đơn giá</th><th className="px-4 py-3 text-right">Thành tiền</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {editingPO.items?.map((item: any, i: number) => (
+                      <tr key={i}>
+                        <td className="px-4 py-3 font-medium text-gray-900 text-xs">{inventory.find((p: any) => p.sku === item.productId)?.name || item.productId}</td>
+                        <td className="px-4 py-3 text-center text-gray-600">{item.qty}</td>
+                        <td className="px-4 py-3 text-center text-gray-600">{formatCurrency(item.price).replace('VND', 'đ')}</td>
+                        <td className="px-4 py-3 text-right font-bold text-gray-900">{formatCurrency(item.qty * item.price).replace('VND', 'đ')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="flex flex-col items-end gap-1">
+                <span className="text-[11px] text-gray-400 font-bold uppercase tracking-wider">Tổng cộng đơn hàng</span>
+                <span className="text-2xl font-black text-blue-600">{formatCurrency(editingPO.price).replace('VND', 'đ')}</span>
+              </div>
+            </div>
+
+            <div className="px-6 py-5 border-t border-gray-100 flex justify-end gap-3 rounded-b-2xl">
+               <button onClick={() => setEditingPO(null)} className="px-8 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors">Đóng</button>
+               {editingPO.status === 'Hàng chờ về' && (
+                 <button onClick={() => setEditingPO(null)} className="px-8 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors shadow-sm">Lưu thay đổi</button>
+               )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
