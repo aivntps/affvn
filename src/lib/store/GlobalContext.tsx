@@ -191,7 +191,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       supabase.from('debt_invoices').select('id, customer_id, supplier_id, remaining_debt, due_date, status').order('created_at', { ascending: false }),
       supabase.from('ho_so_nhan_vien').select('id, tai_khoan, ho_ten, vai_tro, khu_vuc_quan_ly'),
       supabase.from('company_info').select('name, tax_id, address, email, phone, logo_url').eq('id', 1).single(),
-      supabase.from('app_settings').select('value').eq('key', 'inventory_config').maybeSingle()
+      supabase.from('app_settings').select('value').eq('key', 'inventory_config').single()
     ]);
 
     if (custData) setCustomers(custData.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone, region: c.region, type: c.type, status: c.status, sales: Number(c.sales) })));

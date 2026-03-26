@@ -49,7 +49,7 @@ export async function login(prevState: { error: string } | null, formData: FormD
   }
 
   revalidatePath('/', 'layout')
-  redirect('/customers')
+  redirect('/dashboard')
 }
 
 export async function logout() {

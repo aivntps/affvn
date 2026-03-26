@@ -32,7 +32,7 @@ export function Sidebar({ user, onClose }: { user?: any, onClose?: () => void })
   const { companyInfo } = useGlobalData();
   const pathname = usePathname();
   const userName = user?.ho_ten || "Người dùng";
-  const userRole = user?.vai_tro || "Nhân viên";
+  const userRole = user?.vai_role || "Nhân viên";
   const userInitial = userName.charAt(0).toUpperCase();
 
   return (
