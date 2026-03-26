@@ -12,13 +12,37 @@ export default function DebtManagementPage() {
   const [selectedEntity, setSelectedEntity] = useState<any>(null);
   const [remindEntity, setRemindEntity] = useState<any>(null);
 
-  const { customers, suppliers, debtInvoices } = useGlobalData();
+  const { customers, suppliers, debtInvoices, saleOrders, purchaseOrders } = useGlobalData();
+
+  // Tính toán các con số tổng quan
+  const currentMonth = new Date().getMonth();
+  const currentYear = new Date().getFullYear();
+
+  const collectedThisMonth = saleOrders
+    .filter(so => {
+      if (so.status !== "Đã thanh toán") return false;
+      const d = new Date(so.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((sum, so) => sum + so.total, 0);
+
+  const paidThisMonth = purchaseOrders
+    .filter(po => {
+      if (po.status !== "Đã thanh toán" && po.status !== "Đã nhập kho") return false; // Giả định nhập kho là đã thanh toán hoặc tùy logic
+      const d = new Date(po.date);
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    })
+    .reduce((sum, po) => sum + po.qty * po.price, 0); // Đã trả trong tháng (tạm tính từ PO)
+
+  const overdueDebt = debtInvoices
+    .filter(inv => inv.status === "Quá hạn")
+    .reduce((sum, inv) => sum + inv.remainingDebt, 0);
 
   const phaiThuList = customers.map(c => {
     const customerDebts = debtInvoices.filter(inv => inv.customerId === c.id);
     const totalDebt = customerDebts.reduce((sum, inv) => sum + inv.remainingDebt, 0);
     const earliestDue = customerDebts.length > 0 ? customerDebts[0].dueDate : "N/A";
-    const status = totalDebt > 0 ? "Trong hạn" : "Đã thanh toán";
+    const status = totalDebt > 0 ? (customerDebts.some(d => d.status === "Quá hạn") ? "Quá hạn" : "Trong hạn") : "Đã thanh toán";
     return { id: c.id, name: c.name, total: totalDebt, dueDate: earliestDue, status, lastTx: "N/A" };
   });
 
@@ -27,7 +51,7 @@ export default function DebtManagementPage() {
   });
 
   const data = activeTab === "phai_thu" ? phaiThuList : phaiTraList;
-  const totalDebt = data.reduce((sum, item) => sum + item.total, 0);
+  const totalSummaryDebt = data.reduce((sum, item) => sum + item.total, 0);
 
   const detailInvoices = selectedEntity ? debtInvoices.filter((inv: any) => inv.customerId === selectedEntity.id || inv.supplierId === selectedEntity.id) : [];
 
@@ -64,7 +88,7 @@ export default function DebtManagementPage() {
               </div>
             </div>
             <div className={`text-2xl font-bold ${activeTab === "phai_thu" ? "text-gray-900" : "text-orange-800"}`}>
-              {formatCurrency(totalDebt)}
+              {formatCurrency(totalSummaryDebt)}
             </div>
           </div>
 
@@ -75,7 +99,9 @@ export default function DebtManagementPage() {
                 <AlertCircle className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-2xl font-bold text-red-700">0 đ</div>
+            <div className="text-2xl font-bold text-red-700">
+              {formatCurrency(activeTab === "phai_thu" ? overdueDebt : 0)}
+            </div>
           </div>
 
           <div className="bg-green-50/50 border border-green-100 rounded-xl p-5 shadow-sm flex flex-col justify-between h-28">
@@ -88,7 +114,7 @@ export default function DebtManagementPage() {
               </div>
             </div>
             <div className="text-2xl font-bold text-green-700">
-              {activeTab === "phai_thu" ? "10.750.000 đ" : "0 đ"}
+              {formatCurrency(activeTab === "phai_thu" ? collectedThisMonth : paidThisMonth)}
             </div>
           </div>
         </div>
