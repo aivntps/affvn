@@ -1,65 +1,46 @@
 "use client";
 
 import { DollarSign, FileText, AlertTriangle, CreditCard, X } from "lucide-react";
-import { useGlobalData } from "@/lib/store/GlobalContext";
-import { useMemo, useState } from "react";
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export default function DashboardPage() {
-  const { saleOrders, inventory, debtInvoices } = useGlobalData();
+
+  const [showExpiringModal, setShowExpiringModal] = useState(false);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    newOrdersToday: 0,
+    totalDebt: 0,
+    expiringBatches: [] as any[],
+    recentOrders: [] as any[]
+  });
+  const [loading, setLoading] = useState(true);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    async function fetchStats() {
+      const { data, error } = await supabase.rpc('get_dashboard_stats');
+      if (data && !error) {
+        setStats(data as any);
+      }
+      setLoading(false);
+    }
+    fetchStats();
+  }, [supabase]);
+
+  const { totalRevenue, newOrdersToday, expiringBatches, totalDebt, recentOrders } = stats;
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-  const todayStr = new Date().toISOString().split("T")[0];
-
-  const [showExpiringModal, setShowExpiringModal] = useState(false);
-
-  const { totalRevenue, newOrdersToday, expiringBatches, totalDebt, recentOrders } = useMemo(() => {
-    // 1. Total revenue this month (bỏ qua 'Đã hủy', 'Chờ duyệt')
-    const thisMonthOrders = saleOrders.filter(o => {
-      if (o.status === "Đã hủy" || o.status === "Chờ duyệt") return false;
-      const d = new Date(o.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-    const revenue = thisMonthOrders.reduce((acc, o) => acc + o.total, 0);
-
-    // 2. New orders today
-    const ordersToday = saleOrders.filter(o => o.date === todayStr);
-
-    // 3. Expiring batches
-    const in30Days = new Date();
-    in30Days.setDate(in30Days.getDate() + 30);
-    const expiringItems: { sku: string; name: string; batchId: string; expDate: string; qty: number }[] = [];
-    
-    inventory.forEach(p => {
-      p.batches?.forEach(b => {
-        if (b.qty > 0 && b.expDate) {
-          const exp = new Date(b.expDate);
-          if (exp <= in30Days) {
-            expiringItems.push({
-              sku: p.sku,
-              name: p.name,
-              batchId: b.id,
-              expDate: b.expDate,
-              qty: b.qty
-            });
-          }
-        }
-      });
-    });
-
-    // 4. Debt (Tổng nợ cần thu từ DebtInvoices chưa thanh toán)
-    const activeDebts = debtInvoices.filter(d => d.status !== "Đã thanh toán");
-    const debtAmount = activeDebts.reduce((acc, d) => acc + d.remainingDebt, 0);
-
-    // 5. Recent orders
-    const recent = [...saleOrders].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5);
-
-    return { totalRevenue: revenue, newOrdersToday: ordersToday.length, expiringBatches: expiringItems, totalDebt: debtAmount, recentOrders: recent };
-  }, [saleOrders, inventory, debtInvoices, currentMonth, currentYear, todayStr]);
 
   const formatCurrency = (amt: number) => {
     return new Intl.NumberFormat("vi-VN").format(amt) + " đ";
   };
+
+  if (loading) {
+    return <div className="flex h-full items-center justify-center text-gray-400">Đang tải dữ liệu tổng quan...</div>;
+  }
 
   return (
     <div className="flex flex-col space-y-8 h-full">

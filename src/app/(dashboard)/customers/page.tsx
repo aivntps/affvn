@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus, Search, X, Trash2 } from "lucide-react";
 import { useUser } from "@/components/layout/ClientLayout";
 
-import { useGlobalData, Customer } from "@/lib/store/GlobalContext";
+import { createClient } from "@/lib/supabase/client";
+import { Customer } from "@/lib/store/GlobalContext";
 
 interface Region {
   id: number;
@@ -23,7 +24,11 @@ export default function CustomersPage() {
   const [activeTab, setActiveTab] = useState<"customers" | "regions">("customers");
   const user = useUser();
   const userRegion = user?.khu_vuc_quan_ly || "Tất cả khu vực";
-  const { customers, setCustomers } = useGlobalData();
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
   const [regions, setRegions] = useState<Region[]>(initialRegions);
 
   // Filters state
@@ -33,20 +38,33 @@ export default function CustomersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [regionSearch, setRegionSearch] = useState("");
 
-  // Filtered lists optimized with useMemo
-  const filteredCustomers = useMemo(() => {
-    return customers.filter(c => {
-      // Bảo mật cấp độ khu vực
-      if (userRegion !== "Tất cả khu vực" && c.region !== userRegion) return false;
+  const fetchCustomers = async () => {
+    setLoading(true);
+    const supabase = createClient();
+    let query = supabase.from('customers').select('*', { count: 'exact' });
 
-      const matchesSearch = c.name.toLowerCase().includes(customerSearch.toLowerCase()) || 
-                            c.phone.includes(customerSearch);
-      const matchesRegion = regionFilter === "all" || c.region === regionFilter;
-      const matchesType = typeFilter === "all" || c.type === typeFilter;
-      const matchesStatus = statusFilter === "all" || c.status === statusFilter;
-      return matchesSearch && matchesRegion && matchesType && matchesStatus;
-    });
-  }, [customers, customerSearch, regionFilter, typeFilter, statusFilter, userRegion]);
+    if (userRegion !== "Tất cả khu vực") query = query.eq('region', userRegion);
+    if (customerSearch) query = query.or(`name.ilike.%${customerSearch}%,phone.ilike.%${customerSearch}%`);
+    if (regionFilter !== "all") query = query.eq('region', regionFilter);
+    if (typeFilter !== "all") query = query.eq('type', typeFilter);
+    if (statusFilter !== "all") query = query.eq('status', statusFilter);
+
+    query = query.range((page - 1) * pageSize, page * pageSize - 1).order('created_at', { ascending: false });
+
+    const { data, count, error } = await query;
+    if (data && !error) {
+      setCustomers(data);
+      if (count !== null) setTotalCustomers(count);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, [page, customerSearch, regionFilter, typeFilter, statusFilter, userRegion]);
+
+  const filteredCustomers = customers; // Using direct state since it's already filtered by DB
+  const totalPages = Math.ceil(totalCustomers / pageSize) || 1;
 
   const filteredRegions = useMemo(() => {
     return regions.filter(r => 
@@ -74,7 +92,16 @@ export default function CustomersPage() {
       status: "Đang giao dịch",
       sales: 0,
     };
+    // Simulate immediate UI update
     setCustomers([newCustomer, ...customers]);
+    setTotalCustomers(prev => prev + 1);
+    
+    // In background, actually send to Supabase (simplification of logic from actions.ts or use direct call here)
+    const supabase = createClient();
+    supabase.from('customers').insert({
+      id: newCustomer.id, name: newCustomer.name, phone: newCustomer.phone,
+      region: newCustomer.region, type: newCustomer.type, status: newCustomer.status, sales: 0
+    }).then();
     setIsAddingCustomer(false);
   };
 
@@ -96,6 +123,17 @@ export default function CustomersPage() {
       return c;
     });
     setCustomers(updated);
+    
+    const supabase = createClient();
+    const c = editingCustomer;
+    supabase.from('customers').update({
+      name: formData.get("name") as string,
+      phone: formData.get("phone") as string,
+      region: formData.get("region") as string,
+      type: formData.get("type") as string,
+      status: formData.get("status") as string,
+    }).eq('id', c.id).then();
+    
     setEditingCustomer(null);
   };
 
@@ -137,6 +175,11 @@ export default function CustomersPage() {
     }
     if (confirm(`Bạn có chắc muốn xóa khách hàng "${editingCustomer.name}"?`)) {
       setCustomers(customers.filter(c => c.id !== editingCustomer.id));
+      setTotalCustomers(prev => prev - 1);
+      
+      const supabase = createClient();
+      supabase.from('customers').delete().eq('id', editingCustomer.id).then();
+      
       setEditingCustomer(null);
     }
   };
@@ -250,7 +293,8 @@ export default function CustomersPage() {
             </div>
           </div>
 
-          <div className="flex-1 overflow-auto">
+          <div className="flex-1 overflow-auto flex flex-col">
+            <div className="flex-1">
             <table className="w-full text-left text-sm text-gray-600 whitespace-nowrap">
               <thead className="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-100">
                 <tr>
@@ -288,6 +332,48 @@ export default function CustomersPage() {
                 ))}
               </tbody>
             </table>
+          </div>
+          
+          {/* Pagination UI */}
+          <div className="py-3 px-6 border-t border-gray-100 flex items-center justify-between bg-white text-sm">
+            <span className="text-gray-500">
+              Hiển thị {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalCustomers)} / {totalCustomers} khách hàng
+            </span>
+            <div className="flex items-center gap-1">
+              <button 
+                disabled={page === 1} 
+                onClick={() => setPage(page - 1)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Trước
+              </button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let p = page;
+                if (page < 3) p = i + 1;
+                else if (page > totalPages - 2) p = totalPages - 4 + i;
+                else p = page - 2 + i;
+                if (p > 0 && p <= totalPages) {
+                  return (
+                    <button 
+                      key={p} 
+                      onClick={() => setPage(p)}
+                      className={`w-8 h-8 flex items-center justify-center rounded-lg border font-medium ${page === p ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      {p}
+                    </button>
+                  );
+                }
+                return null;
+              })}
+              <button 
+                disabled={page === totalPages} 
+                onClick={() => setPage(page + 1)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Tiếp
+              </button>
+            </div>
+          </div>
           </div>
         </div>
       )}

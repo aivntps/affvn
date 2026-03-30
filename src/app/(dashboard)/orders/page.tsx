@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Plus, Search, Filter, Edit, Printer, Info, Truck, CheckCircle2, List, BarChart3 } from "lucide-react";
 import { useUser } from "@/components/layout/ClientLayout";
 import { SaleOrder, OrderStatus } from "./types";
@@ -31,20 +31,57 @@ export default function OrdersPage() {
   const [updatingOrder, setUpdatingOrder] = useState<SaleOrder | null>(null);
   const [printingOrder, setPrintingOrder] = useState<SaleOrder | null>(null);
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      // Logic phân quyền: staff chỉ thấy đơn của khách hàng thuộc khu vực của mình
-      const hasAccess = isAdmin || !user?.khu_vuc_quan_ly || o.customerRegion === user?.khu_vuc_quan_ly;
-      if (!hasAccess) return false;
+  const [localOrders, setLocalOrders] = useState<SaleOrder[]>([]);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const pageSize = 50;
 
-      const matchSearch = o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          o.customerName.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchStatus = filterStatus === "Tất cả trạng thái" || o.status === filterStatus;
-      const matchDate = !dateStr || o.date === dateStr;
+  const fetchOrders = async () => {
+    setLoading(true);
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
 
-      return matchSearch && matchStatus && matchDate;
-    });
-  }, [orders, searchTerm, filterStatus, dateStr, user, isAdmin]);
+    let selectQuery = 'id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers(type, region), sale_order_items(product_id, qty, price, inventory(name))';
+    if (!isAdmin && user?.khu_vuc_quan_ly) selectQuery = 'id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers!inner(type, region), sale_order_items(product_id, qty, price, inventory(name))';
+
+    let query = supabase.from('sale_orders').select(selectQuery, { count: 'exact' });
+
+    if (!isAdmin && user?.khu_vuc_quan_ly) {
+      query = query.eq('customers.region', user.khu_vuc_quan_ly);
+    }
+    if (searchTerm) {
+      query = query.or(`id.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%`);
+    }
+    if (filterStatus !== "Tất cả trạng thái") {
+      query = query.eq('status', filterStatus);
+    }
+    if (dateStr) {
+      query = query.eq('date', dateStr);
+    }
+
+    query = query.range((page - 1) * pageSize, page * pageSize - 1).order('created_at', { ascending: false });
+
+    const { data, count, error } = await query;
+    if (data && !error) {
+      const formattedData: SaleOrder[] = data.map((s: any) => ({
+        id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customers?.type || 'N/A', customerRegion: s.customers?.region || 'N/A', date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
+        items: (s.sale_order_items || []).map((i: any) => ({
+          productId: i.product_id, productName: i.inventory?.name || 'Sản phẩm không xác định', quantity: i.qty, price: i.price,
+        }))
+      }));
+      setLocalOrders(formattedData);
+      if (count !== null) setTotalOrders(count);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [page, searchTerm, filterStatus, dateStr, user, isAdmin]);
+
+  const filteredOrders = localOrders;
+  const totalPages = Math.ceil(totalOrders / pageSize) || 1;
 
   const handleSaveOrder = async (newOrder: SaleOrder) => {
     const exists = orders.find(o => o.id === newOrder.id);
@@ -64,6 +101,9 @@ export default function OrdersPage() {
 
   const handleChangeStatus = (orderId: string, newStatus: OrderStatus) => {
     updateSaleOrderStatus(orderId, newStatus);
+    
+    // Update local immediately for responsive UI
+    setLocalOrders(localOrders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     setUpdatingOrder(null);
   };
 
@@ -242,6 +282,46 @@ export default function OrdersPage() {
               )}
             </tbody>
           </table>
+        </div>
+        {/* Pagination UI */}
+        <div className="py-3 px-6 border-t border-gray-100 flex items-center justify-between bg-white text-sm">
+          <span className="text-gray-500">
+            Hiển thị {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, totalOrders)} / {totalOrders} đơn hàng
+          </span>
+          <div className="flex items-center gap-1">
+            <button 
+              disabled={page === 1} 
+              onClick={() => setPage(page - 1)}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Trước
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let p = page;
+              if (page < 3) p = i + 1;
+              else if (page > totalPages - 2) p = totalPages - 4 + i;
+              else p = page - 2 + i;
+              if (p > 0 && p <= totalPages) {
+                return (
+                  <button 
+                    key={p} 
+                    onClick={() => setPage(p)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-lg border font-medium ${page === p ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {p}
+                  </button>
+                );
+              }
+              return null;
+            })}
+            <button 
+              disabled={page === totalPages} 
+              onClick={() => setPage(page + 1)}
+              className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Tiếp
+            </button>
+          </div>
         </div>
       </div>
 
