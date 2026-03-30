@@ -93,7 +93,6 @@ export async function saveSaleOrderAction(order: any) {
     const supabase = await createClient()
     const dbOrder = {
         id: order.id, customer_id: order.customerId, customer_name: order.customerName,
-        customer_type: order.customerType, customer_region: order.customerRegion,
         date: order.date, payment_date: order.paymentDate, total: order.total,
         status: order.status, staff_id: order.staffId, staff_name: order.staffName
     }
@@ -102,7 +101,7 @@ export async function saveSaleOrderAction(order: any) {
     
     await supabase.from('sale_order_items').delete().eq('so_id', order.id)
     if (order.items && order.items.length > 0) {
-      const dbItems = order.items.map((i: any) => ({ so_id: order.id, product_id: i.productId, name: i.name, qty: i.qty, price: i.price }))
+      const dbItems = order.items.map((i: any) => ({ so_id: order.id, product_id: i.productId, qty: i.qty, price: i.price }))
       const { error: err2 } = await supabase.from('sale_order_items').insert(dbItems)
       if (err2) return { error: err2.message }
     }

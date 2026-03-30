@@ -4,15 +4,7 @@ import { InventoryItem } from '../types';
 import { formatCurrency, getRopColor } from '../utils';
 import { useGlobalData } from '@/lib/store/GlobalContext';
 
-const getEarliestExpDate = (item: InventoryItem) => {
-  if (!item.batches || item.batches.length === 0) return item.expDate;
-  const validBatches = item.batches.filter((b: any) => b.qty > 0 && b.expDate);
-  if (validBatches.length === 0) return item.expDate;
-  
-  return validBatches.reduce((min, b) => {
-    return new Date(b.expDate).getTime() < new Date(min.expDate).getTime() ? b : min;
-  }).expDate;
-};
+// expDate is now pre-calculated from DB triggers directly on the item
 
 interface InventoryTabProps {
   inventory: InventoryItem[];
@@ -42,7 +34,7 @@ export function InventoryTab({ inventory, setEditingProduct }: InventoryTabProps
             <span className="text-base font-medium text-gray-500">Hàng sắp hết hạn (dưới {expWarningDays} ngày):</span>
             <span className="text-lg font-bold text-red-600">
               {inventory.filter(i => {
-                const exp = getEarliestExpDate(i);
+                const exp = i.expDate;
                 return exp && new Date(exp).getTime() < Date.now() + expWarningDays * 24 * 60 * 60 * 1000;
               }).length}
             </span>
@@ -106,8 +98,8 @@ export function InventoryTab({ inventory, setEditingProduct }: InventoryTabProps
                     <td className={`px-6 py-4 text-center ${getRopColor(item.daysToReorder)}`}>
                       {item.daysToReorder} ngày
                     </td>
-                    <td className={`px-6 py-4 text-center font-medium ${getEarliestExpDate(item) && new Date(getEarliestExpDate(item)).getTime() < Date.now() + expWarningDays * 24 * 60 * 60 * 1000 ? 'text-red-500' : 'text-gray-500'}`}>
-                      {getEarliestExpDate(item) || '-'}
+                    <td className={`px-6 py-4 text-center font-medium ${item.expDate && new Date(item.expDate).getTime() < Date.now() + expWarningDays * 24 * 60 * 60 * 1000 ? 'text-red-500' : 'text-gray-500'}`}>
+                      {item.expDate || '-'}
                     </td>
                     <td className="px-6 py-4 text-center flex justify-center">
                       <button onClick={() => setEditingProduct(item)} className="p-2 text-gray-400 hover:text-blue-600 transition-colors rounded-lg hover:bg-blue-50">

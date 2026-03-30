@@ -69,6 +69,20 @@ export function SettingsTab() {
             />
             <p className="text-xs text-gray-500 mt-1">Thời gian hiển thị cảnh báo trước khi sản phẩm hết hạn</p>
          </div>
+
+         <div className="col-span-1 md:col-span-2 border-t border-gray-100"></div>
+
+         <div>
+            <label className="block text-sm font-medium text-gray-900 mb-1">Hạn dùng mặc định hàng hoàn/hủy (tháng)</label>
+            <input 
+              type="number" 
+              name="returnExpiryMonths"
+              value={localConfig.returnExpiryMonths} 
+              onChange={handleChange}
+              className="w-full px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" 
+            />
+            <p className="text-xs text-gray-500 mt-1">Cộng dồn vào ngày hiện tại để làm Hạn sử dụng cho hàng thu hồi về kho</p>
+         </div>
        </div>
 
         <div className="mt-8">

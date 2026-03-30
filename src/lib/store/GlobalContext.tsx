@@ -93,12 +93,13 @@ export interface CompanyInfo {
 }
 
 export interface InventoryConfig {
+  minMoq: number;
   leadTimeAvg: number;
   leadTimeMax: number;
   maxCapacity: number;
-  minMoq: number;
   storageCost: number;
   expWarningDays: number;
+  returnExpiryMonths: number;
 }
 
 // --- Initial Data ---
@@ -112,12 +113,13 @@ const initialCompanyInfo: CompanyInfo = {
 };
 
 const initialInventoryConfig: InventoryConfig = {
-  leadTimeAvg: 5,
-  leadTimeMax: 10,
-  maxCapacity: 10000,
   minMoq: 100,
+  leadTimeAvg: 20,
+  leadTimeMax: 30,
+  maxCapacity: 10000,
   storageCost: 5000,
-  expWarningDays: 90
+  expWarningDays: 90,
+  returnExpiryMonths: 6
 };
 
 // --- Context Definition ---
@@ -187,7 +189,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       getCachedInventory(),
       supabase.from('suppliers').select('id, name, contact, category, address, debt, status').order('created_at', { ascending: false }),
       supabase.from('purchase_orders').select('id, supplier, qty, spec, price, date, status, po_items(product_id, qty, price)').order('created_at', { ascending: false }),
-      supabase.from('sale_orders').select('id, customer_id, customer_name, customer_type, customer_region, date, payment_date, total, status, staff_id, staff_name, sale_order_items(product_id, name, qty, price)').order('created_at', { ascending: false }),
+      supabase.from('sale_orders').select('id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers(type, region), sale_order_items(product_id, qty, price, inventory(name))').order('created_at', { ascending: false }),
       supabase.from('debt_invoices').select('id, customer_id, supplier_id, remaining_debt, due_date, status').order('created_at', { ascending: false }),
       supabase.from('ho_so_nhan_vien').select('id, tai_khoan, ho_ten, vai_tro, khu_vuc_quan_ly'),
       supabase.from('company_info').select('name, tax_id, address, email, phone, logo_url').eq('id', 1).single(),
@@ -214,8 +216,8 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
     if (soData) {
       setSaleOrders(soData.map((s: any) => ({
-        id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customer_type, customerRegion: s.customer_region, date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
-        items: s.sale_order_items?.map((si: any) => ({ productId: si.product_id, name: si.name, qty: Number(si.qty), price: Number(si.price) })) || []
+        id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customers?.type || 'N/A', customerRegion: s.customers?.region || 'N/A', date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
+        items: s.sale_order_items?.map((si: any) => ({ productId: si.product_id, name: si.inventory?.name || 'Sản phẩm', qty: Number(si.qty), price: Number(si.price) })) || []
       })));
     }
 
