@@ -6,9 +6,10 @@ import { formatCurrency } from '../utils';
 interface SuppliersTabProps {
   suppliers: Supplier[];
   setIsAddingSupplier: (open: boolean) => void;
+  setEditingSupplier: (supplier: Supplier) => void;
 }
 
-export function SuppliersTab({ suppliers, setIsAddingSupplier }: SuppliersTabProps) {
+export function SuppliersTab({ suppliers, setIsAddingSupplier, setEditingSupplier }: SuppliersTabProps) {
   return (
     <div className="flex flex-col space-y-6 flex-1">
       {/* Filters */}
@@ -68,7 +69,12 @@ export function SuppliersTab({ suppliers, setIsAddingSupplier }: SuppliersTabPro
               {suppliers.map((ncc, idx) => (
                 <tr key={idx} className="hover:bg-gray-50 transition-colors text-sm">
                   <td className="px-6 py-4 font-medium text-gray-900">{ncc.id}</td>
-                  <td className="px-6 py-4 font-bold text-blue-600 underline cursor-pointer">{ncc.name}</td>
+                  <td 
+                    className="px-6 py-4 font-bold text-blue-600 underline cursor-pointer hover:text-blue-700"
+                    onClick={() => setEditingSupplier(ncc)}
+                  >
+                    {ncc.name}
+                  </td>
                   <td className="px-6 py-4 text-gray-600">{ncc.contact}</td>
                   <td className="px-6 py-4 text-gray-500">{ncc.address}</td>
                   <td className="px-6 py-4 text-right font-bold text-red-600">{formatCurrency(ncc.debt)}</td>

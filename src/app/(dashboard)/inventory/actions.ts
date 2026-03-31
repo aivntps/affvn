@@ -287,6 +287,18 @@ export async function addSupplierAction(s: any) {
   }
 }
 
+export async function updateSupplierAction(s: any) {
+  try {
+    const supabase = await createClient()
+    const dbS = { name: s.name, contact: s.contact, category: s.category, address: s.address, status: s.status }
+    const { error } = await supabase.from('suppliers').update(dbS).eq('id', s.id)
+    return { error: error?.message || null }
+  } catch (err: any) {
+    console.error("Lỗi try-catch:", err);
+    return { error: err.message || "Lỗi hệ thống không xác định" }
+  }
+}
+
 export async function saveCompanyInfoAction(info: any) {
   try {
     const supabase = await createClient()

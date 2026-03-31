@@ -11,7 +11,7 @@ import { formatCurrency } from "./utils";
 import { InventoryItem, Order, Supplier, GrnItem, PoItem } from "./types";
 
 import { useGlobalData } from "@/lib/store/GlobalContext";
-import { addProductAction, updateProductAction, deleteProductAction, addSupplierAction, savePurchaseOrderAction } from "./actions";
+import { addProductAction, updateProductAction, deleteProductAction, addSupplierAction, updateSupplierAction, savePurchaseOrderAction } from "./actions";
 
 import AddProductModal from "./components/AddProductModal";
 import { EditProductModal } from "./components/EditProductModal";
@@ -23,6 +23,7 @@ export default function InventoryPage() {
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<InventoryItem | null>(null);
   const [isAddingSupplier, setIsAddingSupplier] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [isCreatingPO, setIsCreatingPO] = useState(false);
   const [isReceivingStock, setIsReceivingStock] = useState(false);
   const [editingPO, setEditingPO] = useState<Order | null>(null);
@@ -207,7 +208,7 @@ export default function InventoryPage() {
 
       {activeTab === "inventory" && <InventoryTab inventory={inventory} setEditingProduct={setEditingProduct} />}
       {activeTab === "orders" && <OrdersTab orders={orders} setEditingPO={setEditingPO} setIsReceivingStock={setIsReceivingStock} setInitialPoId={setInitialPoId} />}
-      {activeTab === "suppliers" && <SuppliersTab suppliers={suppliers} setIsAddingSupplier={setIsAddingSupplier} />}
+      {activeTab === "suppliers" && <SuppliersTab suppliers={suppliers} setIsAddingSupplier={setIsAddingSupplier} setEditingSupplier={setEditingSupplier} />}
       {activeTab === "settings" && <SettingsTab />}
 
       {/* --- Modals Section --- */}
@@ -308,6 +309,69 @@ export default function InventoryPage() {
           </div>
         </div>
       )}
+
+      {editingSupplier && (
+        <div className="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl flex flex-col relative animate-in fade-in zoom-in duration-200">
+            <div className="px-6 py-5 flex items-center justify-between border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">Chi tiết nhà cung cấp</h2>
+              <button onClick={() => setEditingSupplier(null)} className="text-gray-400 hover:text-gray-600 p-1"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6">
+              <form className="space-y-4" onSubmit={async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.currentTarget);
+                const updatedNcc: Supplier = {
+                  ...editingSupplier,
+                  name: formData.get('name') as string,
+                  contact: formData.get('contact') as string,
+                  category: formData.get('category') as string,
+                  address: formData.get('address') as string,
+                  status: formData.get('status') as string,
+                };
+
+                // Optimistic UI update
+                setSuppliers(suppliers.map(s => s.id === updatedNcc.id ? updatedNcc : s));
+                setEditingSupplier(null);
+
+                const res = await updateSupplierAction(updatedNcc);
+                if (res?.error) alert("Lỗi cập nhật NCC: " + res.error);
+              }}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Tên nhà cung cấp *</label>
+                    <input name="name" required defaultValue={editingSupplier.name} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Số điện thoại *</label>
+                    <input name="contact" required defaultValue={editingSupplier.contact} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Danh mục</label>
+                    <input name="category" defaultValue={editingSupplier.category} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Địa chỉ / Khu vực</label>
+                    <input name="address" defaultValue={editingSupplier.address} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-sm font-medium text-gray-700">Trạng thái</label>
+                    <select name="status" defaultValue={editingSupplier.status} className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                      <option value="Đang hợp tác">Đang hợp tác</option>
+                      <option value="Ngừng cung cấp">Ngừng cung cấp</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
+                  <button type="button" onClick={() => setEditingSupplier(null)} className="px-6 py-2 border border-gray-200 bg-white text-gray-700 rounded-xl font-bold transition-colors hover:bg-gray-50">Hủy bỏ</button>
+                  <button type="submit" className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-colors">Lưu thay đổi</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
 
     </div>
   );
