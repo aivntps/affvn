@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { X, Trash2 } from "lucide-react";
 import { SaleOrder, SaleOrderItem } from "../types";
 
@@ -39,27 +39,44 @@ export default function CreateOrderModal({
   const [suggestedCustomers, setSuggestedCustomers] = useState<Customer[]>([]);
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
-  
+  const [searchError, setSearchError] = useState<string | null>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Dùng containerRef bọc CẢ input và dropdown để click vào input không đè đóng dropdown
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Logic click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const fetchCustomers = async (keyword: string) => {
     setIsSearchingCustomer(true);
+    setSearchError(null);
     const { createClient } = await import('@/lib/supabase/client');
     const supabase = createClient();
     
-    let query = supabase.from('customers').select('id, name, phone, region, type, status, sales').eq('status', 'Hoạt động');
+    // SỬ DỤNG RPC TRIỆT ĐỂ: Hỗ trợ tìm kiếm tiếng Việt không dấu (unaccent) và lọc status Đang giao dịch từ Database
+    const { data, error } = await supabase.rpc('search_customers_v3', {
+      p_keyword: keyword.trim(),
+      p_region: (user && user.vai_tro !== "Giám đốc" && user.khu_vuc_quan_ly !== "Tất cả khu vực") 
+                ? user.khu_vuc_quan_ly 
+                : null
+    });
     
-    if (user && user.vai_tro !== "Giám đốc" && user.khu_vuc_quan_ly && user.khu_vuc_quan_ly !== "Tất cả khu vực") {
-      query = query.eq('region', user.khu_vuc_quan_ly);
-    }
-    
-    if (keyword.trim()) {
-      query = query.or(`name.ilike.%${keyword}%,phone.ilike.%${keyword}%`);
-    }
-    
-    const { data } = await query.order('created_at', { ascending: false }).limit(10);
-    if (data) {
+    if (error) {
+      console.error("Search RPC error:", error);
+      setSearchError(error.message);
+      setSuggestedCustomers([]);
+    } else if (data) {
       setSuggestedCustomers(data.map((c: any) => ({ ...c, sales: Number(c.sales) })));
+      setSearchError(null);
     }
     setIsSearchingCustomer(false);
   };
@@ -72,7 +89,7 @@ export default function CreateOrderModal({
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
       fetchCustomers(val);
-    }, 400); // 400ms debounce
+    }, 200); // 200ms debounce cho phản hồi tức thì
   };
 
   const handleCustomerFocus = () => {
@@ -191,7 +208,7 @@ export default function CreateOrderModal({
             
             {/* Box 1: Thông tin chung */}
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-4">
-              <div className="relative">
+              <div className="relative" ref={containerRef}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Khách hàng <span className="text-red-500">*</span></label>
                 {selectedCustomer ? (
                   <div className="flex items-center justify-between w-full px-4 py-2 border border-blue-200 bg-blue-50/50 rounded-lg text-sm">
@@ -218,11 +235,15 @@ export default function CreateOrderModal({
                       value={customerSearchTerm}
                       onChange={handleCustomerSearchChange}
                       onFocus={handleCustomerFocus}
-                      className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-shadow"
                     />
                     {showCustomerDropdown && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {isSearchingCustomer ? (
+                      <div 
+                        className="absolute z-[110] w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-xl max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2 duration-200"
+                      >
+                        {searchError ? (
+                          <div className="p-3 text-center text-sm text-red-500">Lỗi kết nối: {searchError}</div>
+                        ) : isSearchingCustomer ? (
                           <div className="p-3 text-center text-sm text-gray-500">Đang tìm kiếm...</div>
                         ) : suggestedCustomers.length > 0 ? (
                           <ul className="divide-y divide-gray-100">

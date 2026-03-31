@@ -6,6 +6,7 @@ import { useUser } from "@/components/layout/ClientLayout";
 
 import { createClient } from "@/lib/supabase/client";
 import { Customer } from "@/lib/store/GlobalContext";
+import { addCustomerAction, updateCustomerAction, deleteCustomerAction } from "./actions";
 
 interface Region {
   id: number;
@@ -80,61 +81,45 @@ export default function CustomersPage() {
   const [editingRegion, setEditingRegion] = useState<Region | null>(null);
 
   // Form states for adding customer
-  const handleAddCustomerSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddCustomerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const newCustomer: Customer = {
-      id: `CUST-${String(customers.length + 1).padStart(4, '0')}`,
+    const customerData = {
       name: formData.get("name") as string,
       phone: formData.get("phone") as string,
       region: formData.get("region") as string,
       type: formData.get("type") as string,
       status: "Đang giao dịch",
-      sales: 0,
     };
-    // Simulate immediate UI update
-    setCustomers([newCustomer, ...customers]);
-    setTotalCustomers(prev => prev + 1);
     
-    // In background, actually send to Supabase (simplification of logic from actions.ts or use direct call here)
-    const supabase = createClient();
-    supabase.from('customers').insert({
-      id: newCustomer.id, name: newCustomer.name, phone: newCustomer.phone,
-      region: newCustomer.region, type: newCustomer.type, status: newCustomer.status, sales: 0
-    }).then();
     setIsAddingCustomer(false);
+    const { error } = await addCustomerAction(customerData);
+    if (error) {
+      alert("Lỗi khi thêm khách hàng: " + error);
+    }
+    fetchCustomers();
   };
 
-  const handleEditCustomerSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEditCustomerSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!editingCustomer) return;
     const formData = new FormData(e.currentTarget);
-    const updated = customers.map(c => {
-      if (c.id === editingCustomer.id) {
-        return {
-          ...c,
-          name: formData.get("name") as string,
-          phone: formData.get("phone") as string,
-          region: formData.get("region") as string,
-          type: formData.get("type") as string,
-          status: formData.get("status") as string,
-        };
-      }
-      return c;
-    });
-    setCustomers(updated);
     
-    const supabase = createClient();
-    const c = editingCustomer;
-    supabase.from('customers').update({
+    const customerData = {
+      id: editingCustomer.id,
       name: formData.get("name") as string,
       phone: formData.get("phone") as string,
       region: formData.get("region") as string,
       type: formData.get("type") as string,
       status: formData.get("status") as string,
-    }).eq('id', c.id).then();
+    };
     
     setEditingCustomer(null);
+    const { error } = await updateCustomerAction(customerData);
+    if (error) {
+       alert("Lỗi khi sửa khách hàng: " + error);
+    }
+    fetchCustomers();
   };
 
   const handleAddRegionSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -167,20 +152,22 @@ export default function CustomersPage() {
     setEditingRegion(null);
   };
 
-  const handleDeleteCustomer = () => {
+  const handleDeleteCustomer = async () => {
     if (!editingCustomer) return;
     if (editingCustomer.sales > 0) {
       alert("Không thể xóa khách hàng này vì đã phát sinh dữ liệu mua hàng (PO)!");
       return;
     }
     if (confirm(`Bạn có chắc muốn xóa khách hàng "${editingCustomer.name}"?`)) {
-      setCustomers(customers.filter(c => c.id !== editingCustomer.id));
-      setTotalCustomers(prev => prev - 1);
-      
-      const supabase = createClient();
-      supabase.from('customers').delete().eq('id', editingCustomer.id).then();
-      
+      const cId = editingCustomer.id;
+      const cName = editingCustomer.name;
       setEditingCustomer(null);
+      
+      const { error } = await deleteCustomerAction(cId, cName);
+      if (error) {
+        alert("Lỗi khi xóa khách hàng: " + error);
+      }
+      fetchCustomers();
     }
   };
 
