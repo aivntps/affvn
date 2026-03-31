@@ -210,6 +210,8 @@ export async function addProductAction(p: any) {
       }
     }
 
+    // @ts-expect-error - Next.js 15 types issue
+    revalidateTag('inventory')
     await logActivityAction(`Thêm sản phẩm mới SKU-${p.sku}`);
     return { error: null }
   } catch (err: any) {
@@ -243,6 +245,8 @@ export async function updateProductAction(p: any) {
       }
     }
 
+    // @ts-expect-error - Next.js 15 types issue
+    revalidateTag('inventory')
     await logActivityAction(`Cập nhật thông tin sản phẩm SKU-${p.sku}`);
     return { error: null }
   } catch (err: any) {
