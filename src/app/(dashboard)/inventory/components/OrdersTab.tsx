@@ -54,7 +54,9 @@ export function OrdersTab({ orders, setEditingPO, setIsReceivingStock, setInitia
                   </td>
                   <td className="px-6 py-4 text-gray-900 font-medium">{order.supplier}</td>
                   <td className="px-6 py-4 font-bold text-gray-900">{order.qty}</td>
-                  <td className="px-6 py-4 text-gray-500">{order.spec}</td>
+                  <td className="px-6 py-4 text-gray-500 italic text-xs max-w-[200px] truncate" title={order.spec}>
+                    {order.spec}
+                  </td>
                   <td className="px-6 py-4 text-gray-600 font-medium">{formatCurrency(order.price)}</td>
                   <td className="px-6 py-4 text-gray-500">{order.date}</td>
                   <td className="px-6 py-4">

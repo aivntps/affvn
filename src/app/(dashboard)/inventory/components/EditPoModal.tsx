@@ -21,7 +21,14 @@ export function EditPoModal({
   const handleSave = () => {
     const price = editingPO.items.reduce((sum, item) => sum + (item.qty * item.price), 0);
     const qty = editingPO.items.reduce((sum, item) => sum + item.qty, 0);
-    onSave({ ...editingPO, price, qty });
+
+    // Cập nhật lại spec mô tả sản phẩm nếu có thay đổi
+    const firstItem = editingPO.items[0];
+    const firstProduct = inventory.find(p => p.sku === firstItem.productId);
+    let specSummary = firstProduct ? `${firstProduct.name} (${firstProduct.spec || 'N/A'})` : "Đơn hàng nhập";
+    if (editingPO.items.length > 1) specSummary += ` và ${editingPO.items.length - 1} sản phẩm khác`;
+
+    onSave({ ...editingPO, price, qty, spec: specSummary });
   };
 
   return (

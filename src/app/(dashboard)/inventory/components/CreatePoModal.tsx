@@ -44,11 +44,18 @@ export function CreatePoModal({
       alert("Vui lòng điền đầy đủ và đúng thông tin các dòng (loại SP, số lượng > 0)!");
       return;
     }
+
+    // Tạo mô tả Quy cách thông minh
+    const firstItem = poItems[0];
+    const firstProduct = inventory.find(p => p.sku === firstItem.productId);
+    let specSummary = firstProduct ? `${firstProduct.name} (${firstProduct.spec || 'N/A'})` : "Đơn hàng nhập";
+    if (poItems.length > 1) specSummary += ` và ${poItems.length - 1} sản phẩm khác`;
+
     const newOrder: Order = {
       id: "NEW",
       supplier: poSupplier,
       qty: poItems.reduce((sum, item) => sum + item.qty, 0),
-      spec: "Nhập qua PO",
+      spec: specSummary,
       price: totalPoAmount,
       date: new Date().toISOString().split('T')[0],
       status: "Hàng chờ về",
