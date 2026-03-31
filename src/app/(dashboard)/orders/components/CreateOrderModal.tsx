@@ -8,7 +8,6 @@ import { Customer, InventoryItem } from "@/lib/store/GlobalContext";
 
 export default function CreateOrderModal({
   user,
-  customers,
   products,
   orders,
   initialOrder,
@@ -16,14 +15,72 @@ export default function CreateOrderModal({
   onClose
 }: {
   user: any;
-  customers: Customer[];
   products: InventoryItem[];
   orders?: SaleOrder[];
   initialOrder?: SaleOrder;
   onSave: (order: SaleOrder) => void;
   onClose: () => void;
 }) {
-  const [selectedCustomerId, setSelectedCustomerId] = useState(initialOrder?.customerId || "");
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    initialOrder
+      ? {
+          id: initialOrder.customerId,
+          name: initialOrder.customerName,
+          phone: "",
+          region: initialOrder.customerRegion,
+          type: initialOrder.customerType,
+          status: "Hoạt động",
+          sales: 0
+        }
+      : null
+  );
+  
+  const [customerSearchTerm, setCustomerSearchTerm] = useState("");
+  const [suggestedCustomers, setSuggestedCustomers] = useState<Customer[]>([]);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const fetchCustomers = async (keyword: string) => {
+    setIsSearchingCustomer(true);
+    const { createClient } = await import('@/lib/supabase/client');
+    const supabase = createClient();
+    
+    let query = supabase.from('customers').select('id, name, phone, region, type, status, sales').eq('status', 'Hoạt động');
+    
+    if (user && user.vai_tro !== "Giám đốc" && user.khu_vuc_quan_ly && user.khu_vuc_quan_ly !== "Tất cả khu vực") {
+      query = query.eq('region', user.khu_vuc_quan_ly);
+    }
+    
+    if (keyword.trim()) {
+      query = query.or(`name.ilike.%${keyword}%,phone.ilike.%${keyword}%`);
+    }
+    
+    const { data } = await query.order('created_at', { ascending: false }).limit(10);
+    if (data) {
+      setSuggestedCustomers(data.map((c: any) => ({ ...c, sales: Number(c.sales) })));
+    }
+    setIsSearchingCustomer(false);
+  };
+
+  const handleCustomerSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCustomerSearchTerm(val);
+    setShowCustomerDropdown(true);
+
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchCustomers(val);
+    }, 400); // 400ms debounce
+  };
+
+  const handleCustomerFocus = () => {
+    setShowCustomerDropdown(true);
+    if (suggestedCustomers.length === 0) {
+      fetchCustomers(""); // Load top 10 on click
+    }
+  };
   const [paymentDate, setPaymentDate] = useState(initialOrder?.paymentDate || "");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [qty, setQty] = useState<number | "">(1);
@@ -34,13 +91,6 @@ export default function CreateOrderModal({
   const formatCurrency = (amt: number) => {
     return new Intl.NumberFormat("vi-VN").format(amt) + " đ";
   };
-
-  const allowedCustomers = useMemo(() => {
-    if (!user || user.vai_tro === "Giám đốc" || user.khu_vuc_quan_ly === "Tất cả khu vực" || !user.khu_vuc_quan_ly) {
-      return customers;
-    }
-    return customers.filter(c => c.region === user.khu_vuc_quan_ly);
-  }, [customers, user]);
 
   const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
@@ -92,7 +142,7 @@ export default function CreateOrderModal({
   const totalAmount = items.reduce((acc, cv) => acc + cv.qty * cv.price, 0);
 
   const handleSave = () => {
-    if (!selectedCustomerId) {
+    if (!selectedCustomer) {
       alert("Vui lòng chọn khách hàng");
       return;
     }
@@ -100,33 +150,19 @@ export default function CreateOrderModal({
       alert("Đơn hàng phải có ít nhất 1 sản phẩm");
       return;
     }
-
-    const customer = customers.find(c => c.id === selectedCustomerId)!;
     
     // Generate ID: SO-yymmdd-STT
-    let newId = "";
+    let newId = "NEW";
     if (initialOrder) {
       newId = initialOrder.id;
-    } else {
-      const todayIso = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-      const yymmdd = todayIso.slice(2).replace(/-/g, ""); // YYMMDD
-      let stt = 1;
-      if (orders) {
-        // Đếm số đơn trong ngày để tính STT
-        const todayOrders = orders.filter((o: SaleOrder) => o.id.startsWith(`SO-${yymmdd}`));
-        stt = todayOrders.length + 1;
-      } else {
-        stt = Math.floor(100 + Math.random() * 900); // Fallback
-      }
-      newId = `SO-${yymmdd}-${stt.toString().padStart(3, "0")}`;
     }
     
     onSave({
       id: newId,
-      customerId: customer.id,
-      customerName: customer.name,
-      customerType: customer.type,
-      customerRegion: customer.region,
+      customerId: selectedCustomer.id,
+      customerName: selectedCustomer.name,
+      customerType: selectedCustomer.type,
+      customerRegion: selectedCustomer.region,
       date: new Date().toISOString().split("T")[0],
       paymentDate: paymentDate || new Date().toISOString().split("T")[0],
       total: totalAmount,
@@ -155,20 +191,61 @@ export default function CreateOrderModal({
             
             {/* Box 1: Thông tin chung */}
             <div className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex flex-col gap-4">
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Khách hàng <span className="text-red-500">*</span></label>
-                <select 
-                  value={selectedCustomerId}
-                  onChange={e => setSelectedCustomerId(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
-                >
-                  <option value="" disabled>Chọn khách hàng...</option>
-                  {allowedCustomers.map(c => (
-                    <option key={c.id} value={c.id}>{c.name} - ({c.type})</option>
-                  ))}
-                </select>
-                {allowedCustomers.length === 0 && (
-                  <p className="text-xs text-red-500 mt-1">Không có khách hàng nào trong khu vực của bạn.</p>
+                {selectedCustomer ? (
+                  <div className="flex items-center justify-between w-full px-4 py-2 border border-blue-200 bg-blue-50/50 rounded-lg text-sm">
+                    <div>
+                      <div className="font-bold text-gray-900">{selectedCustomer.name}</div>
+                      <div className="text-xs text-gray-500">{selectedCustomer.id} - {selectedCustomer.region} ({selectedCustomer.type})</div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setSelectedCustomer(null);
+                        setCustomerSearchTerm("");
+                        setTimeout(() => fetchCustomers(""), 100);
+                      }}
+                      className="text-gray-400 hover:text-red-500 p-1"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <input 
+                      type="text"
+                      placeholder="Tìm SDT, Tên Khách Hàng..."
+                      value={customerSearchTerm}
+                      onChange={handleCustomerSearchChange}
+                      onFocus={handleCustomerFocus}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+                    />
+                    {showCustomerDropdown && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {isSearchingCustomer ? (
+                          <div className="p-3 text-center text-sm text-gray-500">Đang tìm kiếm...</div>
+                        ) : suggestedCustomers.length > 0 ? (
+                          <ul className="divide-y divide-gray-100">
+                            {suggestedCustomers.map(c => (
+                              <li 
+                                key={c.id} 
+                                onClick={() => {
+                                  setSelectedCustomer(c);
+                                  setShowCustomerDropdown(false);
+                                }}
+                                className="px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                              >
+                                <div className="font-bold text-gray-900">{c.name}</div>
+                                <div className="text-xs text-gray-500 flex gap-2"><span>{c.phone}</span><span>•</span><span>{c.region}</span></div>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="p-3 text-center text-sm text-gray-500">Không tìm thấy khách hàng nào.</div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
 

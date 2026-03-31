@@ -44,11 +44,8 @@ export function CreatePoModal({
       alert("Vui lòng điền đầy đủ và đúng thông tin các dòng (loại SP, số lượng > 0)!");
       return;
     }
-    const year = new Date().getFullYear();
-    const stt = String(orderCount + 1).padStart(3, '0');
-    
     const newOrder: Order = {
-      id: `PO-${year}-${stt}`,
+      id: "NEW",
       supplier: poSupplier,
       qty: poItems.reduce((sum, item) => sum + item.qty, 0),
       spec: "Nhập qua PO",

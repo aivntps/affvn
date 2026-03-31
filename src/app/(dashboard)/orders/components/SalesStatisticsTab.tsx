@@ -1,18 +1,21 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useGlobalData } from "@/lib/store/GlobalContext";
 import { useUser } from "@/components/layout/ClientLayout";
 import { formatCurrency } from "@/app/(dashboard)/inventory/utils";
 import { Filter, Calendar, MapPin, User as UserIcon, TrendingUp, ShoppingCart } from "lucide-react";
 
 export default function SalesStatisticsTab() {
-  const { saleOrders, staffList } = useGlobalData();
+  const { staffList } = useGlobalData();
   const user = useUser();
   const isAdmin = user?.vai_tro === "Giám đốc";
 
   // Mặc định tháng này
   const currentMonth = new Date().toISOString().slice(0, 7);
+
+  const [aggregatedData, setAggregatedData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const [dateMonth, setDateMonth] = useState(currentMonth);
   const [staffIdFilter, setStaffIdFilter] = useState("all");
@@ -22,52 +25,84 @@ export default function SalesStatisticsTab() {
   const regions = ["Tất cả khu vực", "Thành phố Hồ Chí Minh", "Bình Dương", "Miền Nam", "Miền Bắc"];
   const statuses = ["Tất cả trạng thái", "Chờ duyệt", "Đang giao", "Chưa TT", "Đã thanh toán", "Đã hủy"];
 
-  const filteredOrders = useMemo(() => {
-    return saleOrders.filter(o => {
+  useEffect(() => {
+    let active = true;
+    const loadOrders = async () => {
+      setLoading(true);
+      const { createClient } = await import("@/lib/supabase/client");
+      const supabase = createClient();
+      
+      // Calculate start and end date for the selected month
+      const start = `${dateMonth}-01`;
+      const dateEnd = new Date(new Date(start).getFullYear(), new Date(start).getMonth() + 1, 0); // Last day of month
+      const end = dateEnd.toISOString().slice(0, 10);
+
+      const { data } = await supabase.rpc('get_sales_aggregate_by_month', {
+        p_start_date: start,
+        p_end_date: end
+      });
+
+      if (active && data) {
+        setAggregatedData(data.map((d: any) => ({
+          staffId: d.staff_id,
+          staffName: d.staff_name,
+          customerRegion: d.customer_region,
+          status: d.status,
+          orderCount: Number(d.order_count),
+          totalRevenue: Number(d.total_revenue)
+        })));
+      }
+      if (active) setLoading(false);
+    };
+    if (dateMonth) loadOrders();
+    return () => { active = false; };
+  }, [dateMonth]);
+
+  const filteredData = useMemo(() => {
+    return aggregatedData.filter(row => {
       // 1. Phân quyền bắt buộc
       if (!isAdmin) {
-        if (user?.khu_vuc_quan_ly && o.customerRegion !== user.khu_vuc_quan_ly) return false;
-        if (user && o.staffName !== user.ho_ten && o.staffId !== user.id) return false;
+        if (user?.khu_vuc_quan_ly && row.customerRegion !== user.khu_vuc_quan_ly) return false;
+        if (user && row.staffName !== user.ho_ten && row.staffId !== user.id) return false;
       }
 
-      // 2. Bộ lọc Thời gian
-      if (dateMonth && (!o.date || !o.date.startsWith(dateMonth))) return false;
-      
-      // 3. Bộ lọc Nhân viên (Chỉ áp dụng nếu Admin chọn filter)
-      if (isAdmin && staffIdFilter !== "all" && o.staffId !== staffIdFilter) return false;
+      // 2. Bộ lọc Nhân viên
+      if (isAdmin && staffIdFilter !== "all" && row.staffId !== staffIdFilter) return false;
 
-      // 4. Bộ lọc Khu vực (Chỉ áp dụng filter nếu không phải là Tất cả khu vực)
-      if (isAdmin && regionFilter !== "Tất cả khu vực" && o.customerRegion !== regionFilter) return false;
+      // 3. Bộ lọc Khu vực
+      if (isAdmin && regionFilter !== "Tất cả khu vực" && row.customerRegion !== regionFilter) return false;
 
-      // 5. Bộ lọc Trạng thái
-      if (status !== "Tất cả trạng thái" && o.status !== status) return false;
+      // 4. Bộ lọc Trạng thái
+      if (status !== "Tất cả trạng thái" && row.status !== status) return false;
 
       return true;
     });
-  }, [saleOrders, dateMonth, staffIdFilter, regionFilter, status, isAdmin, user]);
+  }, [aggregatedData, staffIdFilter, regionFilter, status, isAdmin, user]);
 
   const totalSales = useMemo(() => {
-    return filteredOrders
-      .filter(o => o.status === "Chưa TT" || o.status === "Đã thanh toán")
-      .reduce((sum, o) => sum + o.total, 0);
-  }, [filteredOrders]);
+    return filteredData
+      .filter(row => row.status === "Chưa TT" || row.status === "Đã thanh toán")
+      .reduce((sum, row) => sum + row.totalRevenue, 0);
+  }, [filteredData]);
 
-  const totalOrders = filteredOrders.length;
+  const totalOrders = useMemo(() => {
+    return filteredData.reduce((sum, row) => sum + row.orderCount, 0);
+  }, [filteredData]);
 
   const salesByStaff = useMemo(() => {
     const map: Record<string, { staffName: string, total: number, count: number }> = {};
-    filteredOrders.forEach(o => {
-      if (!map[o.staffId]) {
-        map[o.staffId] = { staffName: o.staffName, total: 0, count: 0 };
+    filteredData.forEach(row => {
+      if (!map[row.staffId]) {
+        map[row.staffId] = { staffName: row.staffName, total: 0, count: 0 };
       }
-      // Ghi nhận doanh thu tài chính khi đơn vào công nợ hoặc đã ting ting
-      if (o.status === "Chưa TT" || o.status === "Đã thanh toán") {
-        map[o.staffId].total += o.total;
+      
+      if (row.status === "Chưa TT" || row.status === "Đã thanh toán") {
+        map[row.staffId].total += row.totalRevenue;
       }
-      map[o.staffId].count += 1;
+      map[row.staffId].count += row.orderCount;
     });
     return Object.values(map).sort((a, b) => b.total - a.total);
-  }, [filteredOrders]);
+  }, [filteredData]);
 
   return (
     <div className="flex flex-col space-y-6 animate-in fade-in duration-300">
@@ -146,6 +181,12 @@ export default function SalesStatisticsTab() {
         </div>
 
       </div>
+
+      {loading && (
+        <div className="flex justify-center p-4">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

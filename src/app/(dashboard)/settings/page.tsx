@@ -12,6 +12,28 @@ export default function SettingsPage() {
 
   const [formData, setFormData] = useState(companyInfo);
   const [logoPreview, setLogoPreview] = useState(companyInfo.logoUrl);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (activeTab === 'logs') {
+      const fetchLogs = async () => {
+        setLogsLoading(true);
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('activity_logs')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(30);
+        if (!error && data) {
+          setLogs(data);
+        }
+        setLogsLoading(false);
+      }
+      fetchLogs();
+    }
+  }, [activeTab]);
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -215,10 +237,10 @@ export default function SettingsPage() {
           <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white">
             <div>
               <h2 className="text-lg font-bold text-gray-900 mb-1">Lịch sử hệ thống</h2>
-              <p className="text-sm text-gray-500">Hiển thị 50 hành động gần nhất của các nhân viên trên hệ thống.</p>
+              <p className="text-sm text-gray-500">Hiển thị 30 hành động gần nhất của các nhân viên trên hệ thống.</p>
             </div>
             <div className="px-3 py-1.5 bg-blue-50/50 border border-blue-100 text-blue-700 rounded-lg text-xs font-semibold whitespace-nowrap">
-              Tổng: 50/50
+              Tổng: {logs.length}/30
             </div>
           </div>
           <div className="overflow-x-auto">
@@ -232,72 +254,40 @@ export default function SettingsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 bg-white">
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">14:30:49 25/3/2026</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">Phan Quang Viên</td>
-                  <td className="px-6 py-4 text-gray-700">Cập nhật tồn kho</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-100 rounded-full">
-                      <XCircle className="w-3.5 h-3.5" />
-                      Thất bại
-                    </span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">13:30:49 25/3/2026</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">Nguyễn Văn A</td>
-                  <td className="px-6 py-4 text-gray-700">Thêm khách hàng mới</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-100 rounded-full">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Thành công
-                    </span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">12:30:49 25/3/2026</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">Trần Thị B</td>
-                  <td className="px-6 py-4 text-gray-700">Tạo đơn hàng</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-100 rounded-full">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Thành công
-                    </span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">11:30:49 25/3/2026</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">Lê Văn C</td>
-                  <td className="px-6 py-4 text-gray-700">Xuất báo cáo</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-100 rounded-full">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Thành công
-                    </span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">10:30:49 25/3/2026</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">Phan Quang Viên</td>
-                  <td className="px-6 py-4 text-gray-700">Đăng nhập hệ thống</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-100 rounded-full">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Thành công
-                    </span>
-                  </td>
-                </tr>
-                <tr className="hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4 text-gray-500">09:30:49 25/3/2026</td>
-                  <td className="px-6 py-4 font-medium text-gray-900">Nguyễn Văn A</td>
-                  <td className="px-6 py-4 text-gray-700">Chỉnh sửa thông tin công ty</td>
-                  <td className="px-6 py-4 text-right">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-100 rounded-full">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Thành công
-                    </span>
-                  </td>
-                </tr>
+                {logsLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">Đang tải nhật ký...</td>
+                  </tr>
+                ) : logs.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">Chưa có nhật ký hoạt động nào</td>
+                  </tr>
+                ) : (
+                  logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-6 py-4 text-gray-500">
+                        {new Date(log.created_at).toLocaleString("vi-VN", {
+                          hour: '2-digit', minute: '2-digit', second:'2-digit', day: '2-digit', month: '2-digit', year: 'numeric'
+                        })}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-900">{log.nhan_vien}</td>
+                      <td className="px-6 py-4 text-gray-700">{log.chi_tiet}</td>
+                      <td className="px-6 py-4 text-right">
+                        {log.trang_thai === "Thành công" ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-green-700 bg-green-50 border border-green-100 rounded-full">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Thành công
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-red-700 bg-red-50 border border-red-100 rounded-full">
+                            <AlertCircle className="w-3.5 h-3.5" />
+                            {log.trang_thai}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

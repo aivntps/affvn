@@ -126,24 +126,11 @@ const initialInventoryConfig: InventoryConfig = {
 interface GlobalContextType {
   staffList: Staff[];
   setStaffList: React.Dispatch<React.SetStateAction<Staff[]>>;
-  
-  customers: Customer[];
-  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
-  
   inventory: InventoryItem[];
   setInventory: React.Dispatch<React.SetStateAction<InventoryItem[]>>;
   
   suppliers: Supplier[];
   setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
-  
-  purchaseOrders: PurchaseOrder[];
-  setPurchaseOrders: React.Dispatch<React.SetStateAction<PurchaseOrder[]>>;
-  
-  saleOrders: SaleOrder[];
-  setSaleOrders: React.Dispatch<React.SetStateAction<SaleOrder[]>>;
-  
-  debtInvoices: DebtInvoice[];
-  setDebtInvoices: React.Dispatch<React.SetStateAction<DebtInvoice[]>>;
 
   companyInfo: CompanyInfo;
   setCompanyInfo: React.Dispatch<React.SetStateAction<CompanyInfo>>;
@@ -161,42 +148,29 @@ const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export function GlobalProvider({ children }: { children: ReactNode }) {
   const [staffList, setStaffList] = useState<Staff[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
-  const [saleOrders, setSaleOrders] = useState<SaleOrder[]>([]);
-  const [debtInvoices, setDebtInvoices] = useState<DebtInvoice[]>([]);
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(initialCompanyInfo);
   const [inventoryConfig, setInventoryConfig] = useState<InventoryConfig>(initialInventoryConfig);
 
   const supabase = createClient();
 
   const fetchData = async () => {
-    // Mảng các Promise để fetch dữ liệu song song thay vì tuần tự
     const [
-      { data: custData },
       invData,
       { data: supData },
-      { data: poData },
-      { data: soData },
-      { data: debtData },
       { data: staffData },
       { data: compData },
       { data: settingsData }
     ] = await Promise.all([
-      supabase.from('customers').select('id, name, phone, region, type, status, sales').order('created_at', { ascending: false }),
       getCachedInventory(),
       supabase.from('suppliers').select('id, name, contact, category, address, debt, status').order('created_at', { ascending: false }),
-      supabase.from('purchase_orders').select('id, supplier, qty, spec, price, date, status, po_items(product_id, qty, price)').order('created_at', { ascending: false }),
-      supabase.from('sale_orders').select('id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers(type, region), sale_order_items(product_id, qty, price, inventory(name))').order('created_at', { ascending: false }),
-      supabase.from('debt_invoices').select('id, customer_id, supplier_id, remaining_debt, due_date, status').order('created_at', { ascending: false }),
       supabase.from('ho_so_nhan_vien').select('id, tai_khoan, ho_ten, vai_tro, khu_vuc_quan_ly'),
       supabase.from('company_info').select('name, tax_id, address, email, phone, logo_url').eq('id', 1).single(),
       supabase.from('app_settings').select('value').eq('key', 'inventory_config').single()
     ]);
 
-    if (custData) setCustomers(custData.map((c: any) => ({ id: c.id, name: c.name, phone: c.phone, region: c.region, type: c.type, status: c.status, sales: Number(c.sales) })));
+
     
     if (invData) {
       setInventory(invData.map((i: any) => ({
@@ -207,21 +181,8 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
     if (supData) setSuppliers(supData.map((s: any) => ({ id: s.id, name: s.name, contact: s.contact, category: s.category, address: s.address, debt: Number(s.debt), status: s.status })));
     
-    if (poData) {
-      setPurchaseOrders(poData.map((p: any) => ({
-        id: p.id, supplier: p.supplier, qty: Number(p.qty), spec: p.spec, price: Number(p.price), date: p.date, status: p.status,
-        items: p.po_items?.map((pi: any) => ({ productId: pi.product_id, qty: Number(pi.qty), price: Number(pi.price) })) || []
-      })));
-    }
 
-    if (soData) {
-      setSaleOrders(soData.map((s: any) => ({
-        id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customers?.type || 'N/A', customerRegion: s.customers?.region || 'N/A', date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
-        items: s.sale_order_items?.map((si: any) => ({ productId: si.product_id, name: si.inventory?.name || 'Sản phẩm', qty: Number(si.qty), price: Number(si.price) })) || []
-      })));
-    }
 
-    if (debtData) setDebtInvoices(debtData.map((d: any) => ({ id: d.id, customerId: d.customer_id, supplierId: d.supplier_id, remainingDebt: Number(d.remaining_debt), dueDate: d.due_date, status: d.status as any })));
     
     if (staffData) setStaffList(staffData.map((s: any) => ({ id: s.id, tai_khoan: s.tai_khoan, ho_ten: s.ho_ten, vai_tro: s.vai_tro, khu_vuc_quan_ly: s.khu_vuc_quan_ly })));
 
@@ -255,8 +216,6 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
   // LOGIC: Update Order Status via Server Actions RPC
   const updateSaleOrderStatus = async (orderId: string, newStatus: SaleOrder["status"]) => {
-    // Optimistic Update
-    setSaleOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
     
     // Real Update
     const res = await updateSaleOrderAction(orderId, newStatus);
@@ -272,9 +231,6 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   const receiveStockFromPO = async (poId: string, batches?: any[]) => {
     if (!batches || batches.length === 0) return;
     
-    // Optimistic Update
-    setPurchaseOrders(prev => prev.map(p => p.id === poId ? { ...p, status: 'Đã nhập kho' } : p));
-    
     // Real Update
     const res = await receiveStockAction(poId, batches);
     if (!res?.error) {
@@ -287,12 +243,8 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
   const value = {
     staffList, setStaffList,
-    customers, setCustomers,
     inventory, setInventory,
     suppliers, setSuppliers,
-    purchaseOrders, setPurchaseOrders,
-    saleOrders, setSaleOrders,
-    debtInvoices, setDebtInvoices,
     companyInfo, setCompanyInfo,
     inventoryConfig, setInventoryConfig,
     updateSaleOrderStatus,

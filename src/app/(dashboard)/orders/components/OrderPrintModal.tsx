@@ -13,11 +13,10 @@ export default function OrderPrintModal({
   order: SaleOrder;
   onClose: () => void;
 }) {
-  const { companyInfo, customers, inventory } = useGlobalData();
+  const { companyInfo, inventory } = useGlobalData();
   const printRef = useRef<HTMLDivElement>(null);
 
-  // Tìm khách hàng để lấy address + phone nếu cần (vì SaleOrder context hiện tại chưa lưu full địa chỉ)
-  const customerInfo = customers.find(c => c.id === order.customerId);
+
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount);
@@ -122,7 +121,7 @@ export default function OrderPrintModal({
             <h3 className="font-bold text-sm mb-1">Thông tin khách hàng:</h3>
             <div className="flex justify-between">
               <p><span className="font-semibold">Tên khách hàng:</span> {order.customerName}</p>
-              <p><span className="font-semibold">Điện thoại:</span> {customerInfo?.phone || "---"}</p>
+              <p><span className="font-semibold">Điện thoại:</span> {order.customerPhone || "---"}</p>
             </div>
             <p><span className="font-semibold">Địa chỉ:</span> {order.customerRegion}</p>
           </div>

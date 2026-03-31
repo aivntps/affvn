@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MessageSquare, CreditCard, AlertCircle, TrendingUp, DollarSign, X } from 'lucide-react';
 import { formatCurrency } from '../inventory/utils';
 
@@ -12,48 +12,85 @@ export default function DebtManagementPage() {
   const [selectedEntity, setSelectedEntity] = useState<any>(null);
   const [remindEntity, setRemindEntity] = useState<any>(null);
 
-  const { customers, suppliers, debtInvoices, saleOrders, purchaseOrders } = useGlobalData();
+  const { suppliers } = useGlobalData();
+
+  const [phaiThuList, setPhaiThuList] = useState<any[]>([]);
+  const [detailInvoices, setDetailInvoices] = useState<any[]>([]);
+  const [overdueDebt, setOverdueDebt] = useState(0);
 
   // Tính toán các con số tổng quan
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
 
-  const collectedThisMonth = saleOrders
-    .filter(so => {
-      if (so.status !== "Đã thanh toán") return false;
-      const d = new Date(so.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((sum, so) => sum + so.total, 0);
+  const [collectedThisMonth, setCollectedThisMonth] = useState(0);
+  const [paidThisMonth, setPaidThisMonth] = useState(0);
 
-  const paidThisMonth = purchaseOrders
-    .filter(po => {
-      if (po.status !== "Đã thanh toán" && po.status !== "Đã nhập kho") return false; // Giả định nhập kho là đã thanh toán hoặc tùy logic
-      const d = new Date(po.date);
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    })
-    .reduce((sum, po) => sum + po.qty * po.price, 0); // Đã trả trong tháng (tạm tính từ PO)
+  useEffect(() => {
+    let active = true;
+    const loadMonthlyData = async () => {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      
+      const start = new Date(currentYear, currentMonth, 1).toLocaleDateString("en-CA"); // YYYY-MM-DD
+      const end = new Date(currentYear, currentMonth + 1, 0).toLocaleDateString("en-CA");
+      
+      const { data: soData } = await supabase.from('sale_orders').select('total').eq('status', 'Đã thanh toán').gte('date', start).lte('date', end);
+      if (active && soData) {
+        setCollectedThisMonth(soData.reduce((sum: number, item: any) => sum + Number(item.total), 0));
+      }
 
-  const overdueDebt = debtInvoices
-    .filter(inv => inv.status === "Quá hạn")
-    .reduce((sum, inv) => sum + inv.remainingDebt, 0);
+      const { data: poData } = await supabase.from('purchase_orders').select('qty, price').in('status', ['Đã thanh toán', 'Đã nhập kho']).gte('date', start).lte('date', end);
+      if (active && poData) {
+        setPaidThisMonth(poData.reduce((sum: number, item: any) => sum + (Number(item.qty) * Number(item.price)), 0));
+      }
+    };
+    loadMonthlyData();
+    return () => { active = false; };
+  }, [currentMonth, currentYear]);
 
-  const phaiThuList = customers.map(c => {
-    const customerDebts = debtInvoices.filter(inv => inv.customerId === c.id);
-    const totalDebt = customerDebts.reduce((sum, inv) => sum + inv.remainingDebt, 0);
-    const earliestDue = customerDebts.length > 0 ? customerDebts[0].dueDate : "N/A";
-    const status = totalDebt > 0 ? (customerDebts.some(d => d.status === "Quá hạn") ? "Quá hạn" : "Trong hạn") : "Đã thanh toán";
-    return { id: c.id, name: c.name, total: totalDebt, dueDate: earliestDue, status, lastTx: "N/A" };
-  });
+  useEffect(() => {
+    let active = true;
+    const fetchPhaiThu = async () => {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data } = await supabase.rpc('get_customer_debts_summary');
+      if (active && data) {
+        setPhaiThuList(data);
+        const overdue = data.filter((d: any) => d.status === 'Quá hạn').reduce((sum: number, d: any) => sum + d.total_debt, 0);
+        setOverdueDebt(overdue);
+      }
+    };
+    fetchPhaiThu();
 
-  const phaiTraList = suppliers.map(s => {
-    return { id: s.id, name: s.name, total: s.debt, dueDate: "N/A", status: "Trong hạn", lastTx: "N/A" };
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedEntity) {
+      setDetailInvoices([]);
+      return;
+    }
+    const fetchDetails = async () => {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data } = await supabase
+        .from('debt_invoices')
+        .select('*')
+        .or(`customer_id.eq.${selectedEntity.id},supplier_id.eq.${selectedEntity.id}`);
+      
+      if (data) {
+        setDetailInvoices(data);
+      }
+    };
+    fetchDetails();
+  }, [selectedEntity]);
+
+  const phaiTraList = suppliers.map((s: any) => {
+    return { id: s.id, name: s.name, total_debt: s.debt, due_date: "N/A", status: "Trong hạn", last_tx: "N/A" };
   });
 
   const data = activeTab === "phai_thu" ? phaiThuList : phaiTraList;
-  const totalSummaryDebt = data.reduce((sum, item) => sum + item.total, 0);
-
-  const detailInvoices = selectedEntity ? debtInvoices.filter((inv: any) => inv.customerId === selectedEntity.id || inv.supplierId === selectedEntity.id) : [];
+  const totalSummaryDebt = data.reduce((sum: number, item: any) => sum + item.total_debt, 0);
 
   return (
     <div className="flex flex-col h-full space-y-4 animate-in fade-in duration-300">
@@ -162,14 +199,14 @@ export default function DebtManagementPage() {
                     >
                       {item.name}
                     </td>
-                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(item.total)}</td>
-                    <td className="px-6 py-4 text-gray-500">{item.dueDate}</td>
+                    <td className="px-6 py-4 font-bold text-gray-900">{formatCurrency(item.total_debt)}</td>
+                    <td className="px-6 py-4 text-gray-500">{item.due_date}</td>
                     <td className="px-6 py-4">
                       <span className="px-2.5 py-1 bg-green-50 text-green-700 border border-green-100 rounded-full text-xs font-medium">
                         {item.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-gray-500">{item.lastTx}</td>
+                    <td className="px-6 py-4 text-gray-500">{item.last_tx}</td>
                     <td className="px-6 py-4 text-right">
                       {activeTab === "phai_thu" ? (
                         <button 
@@ -222,7 +259,7 @@ export default function DebtManagementPage() {
                   <h3 className="font-bold text-gray-800 text-sm">Danh sách đơn hàng nợ</h3>
                   <div className="text-right">
                     <span className="text-sm text-gray-500 mr-2">Tổng nợ hiện tại:</span>
-                    <span className="text-lg font-bold text-red-600">{formatCurrency(selectedEntity.total)}</span>
+                    <span className="text-lg font-bold text-red-600">{formatCurrency(selectedEntity.total_debt)}</span>
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -240,8 +277,8 @@ export default function DebtManagementPage() {
                       {detailInvoices.map((inv: any, idx: number) => (
                         <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-5 py-3 font-medium text-blue-600 cursor-pointer hover:underline" onClick={() => alert("Mở chi tiết đơn hàng: " + inv.id)}>{inv.id}</td>
-                          <td className="px-5 py-3 font-bold text-gray-900 text-right">{formatCurrency(inv.remainingDebt)}</td>
-                          <td className="px-5 py-3 text-center text-gray-500">{inv.dueDate}</td>
+                          <td className="px-5 py-3 font-bold text-gray-900 text-right">{formatCurrency(inv.remaining_debt)}</td>
+                          <td className="px-5 py-3 text-center text-gray-500">{inv.due_date}</td>
                           <td className="px-5 py-3 text-center">
                             <span className={`px-2.5 py-1 border rounded-full text-xs font-medium ${inv.status === 'Trong hạn' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-red-50 text-red-700 border-red-100'}`}>
                               {inv.status}
@@ -294,7 +331,7 @@ export default function DebtManagementPage() {
               <p className="text-gray-600 mb-4">Bạn có thể chỉnh sửa nội dung bên dưới trước khi sao chép và gửi cho khách hàng qua Zalo hoặc SMS.</p>
               <textarea 
                 className="w-full h-64 p-5 border border-gray-200 rounded-xl text-base focus:ring-2 focus:ring-blue-500 outline-none resize-none leading-relaxed text-gray-700"
-                defaultValue={`Kính gửi ${remindEntity.name},\n\nChúng tôi xin thông báo tổng công nợ hiện tại của quý khách tính đến ngày hôm nay là: ${formatCurrency(remindEntity.total)}\n\nKính mong quý khách sắp xếp thanh toán trong thời gian sớm nhất.\n\nXin cảm ơn!`}
+                defaultValue={`Kính gửi ${remindEntity.name},\n\nChúng tôi xin thông báo tổng công nợ hiện tại của quý khách tính đến ngày hôm nay là: ${formatCurrency(remindEntity.total_debt)}\n\nKính mong quý khách sắp xếp thanh toán trong thời gian sớm nhất.\n\nXin cảm ơn!`}
               />
             </div>
 

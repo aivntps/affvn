@@ -16,7 +16,7 @@ export default function OrdersPage() {
   const user = useUser();
   const isAdmin = user ? (user.vai_tro === "Giám đốc") : true;
 
-  const { saleOrders: orders, setSaleOrders: setOrders, customers: globalCustomers, inventory, updateSaleOrderStatus } = useGlobalData();
+  const { inventory, updateSaleOrderStatus } = useGlobalData();
 
   // Filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,8 +42,8 @@ export default function OrdersPage() {
     const { createClient } = await import("@/lib/supabase/client");
     const supabase = createClient();
 
-    let selectQuery = 'id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers(type, region), sale_order_items(product_id, qty, price, inventory(name))';
-    if (!isAdmin && user?.khu_vuc_quan_ly) selectQuery = 'id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers!inner(type, region), sale_order_items(product_id, qty, price, inventory(name))';
+    let selectQuery = 'id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers(type, region, phone), sale_order_items(product_id, qty, price, inventory(name))';
+    if (!isAdmin && user?.khu_vuc_quan_ly) selectQuery = 'id, customer_id, customer_name, date, payment_date, total, status, staff_id, staff_name, customers!inner(type, region, phone), sale_order_items(product_id, qty, price, inventory(name))';
 
     let query = supabase.from('sale_orders').select(selectQuery, { count: 'exact' });
 
@@ -65,7 +65,7 @@ export default function OrdersPage() {
     const { data, count, error } = await query;
     if (data && !error) {
       const formattedData: SaleOrder[] = data.map((s: any) => ({
-        id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customers?.type || 'N/A', customerRegion: s.customers?.region || 'N/A', date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
+        id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customers?.type || 'N/A', customerRegion: s.customers?.region || 'N/A', customerPhone: s.customers?.phone || 'N/A', date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
         items: (s.sale_order_items || []).map((i: any) => ({
           productId: i.product_id, productName: i.inventory?.name || 'Sản phẩm không xác định', quantity: i.qty, price: i.price,
         }))
@@ -84,18 +84,14 @@ export default function OrdersPage() {
   const totalPages = Math.ceil(totalOrders / pageSize) || 1;
 
   const handleSaveOrder = async (newOrder: SaleOrder) => {
-    const exists = orders.find(o => o.id === newOrder.id);
-    if (exists) {
-      setOrders(orders.map(o => o.id === newOrder.id ? newOrder : o));
-    } else {
-      setOrders([newOrder, ...orders]);
-    }
     setIsCreating(false);
     setEditingOrder(null);
 
     const res = await saveSaleOrderAction(newOrder);
     if (res?.error) {
       alert("Lỗi lưu đơn hàng: " + res.error);
+    } else {
+      fetchOrders(); // Refetch the precise local data after save
     }
   };
 
@@ -328,9 +324,8 @@ export default function OrdersPage() {
       {(isCreating || editingOrder) && (
         <CreateOrderModal 
           user={user}
-          customers={globalCustomers}
           products={inventory}
-          orders={orders}
+          orders={localOrders}
           initialOrder={editingOrder || undefined}
           onSave={handleSaveOrder}
           onClose={() => {

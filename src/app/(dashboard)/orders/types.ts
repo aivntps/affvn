@@ -13,6 +13,7 @@ export interface SaleOrder {
   customerName: string;
   customerType: string;
   customerRegion: string;
+  customerPhone?: string;
   date: string;
   paymentDate: string;
   total: number;

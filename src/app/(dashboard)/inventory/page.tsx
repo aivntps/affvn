@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, Box, Users, X, Trash2 } from "lucide-react";
 
 import { InventoryTab } from "./components/InventoryTab";
@@ -29,7 +29,32 @@ export default function InventoryPage() {
   const [initialPoId, setInitialPoId] = useState<string | undefined>(undefined);
 
   // States
-  const { inventory, setInventory, purchaseOrders: orders, setPurchaseOrders: setOrders, suppliers, setSuppliers, receiveStockFromPO } = useGlobalData();
+  const { inventory, setInventory, suppliers, setSuppliers, receiveStockFromPO } = useGlobalData();
+  
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  const fetchPurchaseOrders = async () => {
+    setOrdersLoading(true);
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    const { data: poData } = await supabase
+      .from('purchase_orders')
+      .select('id, supplier, qty, spec, price, date, status, po_items(product_id, qty, price)')
+      .order('created_at', { ascending: false });
+    
+    if (poData) {
+      setOrders(poData.map((p: any) => ({
+        id: p.id, supplier: p.supplier, qty: Number(p.qty), spec: p.spec, price: Number(p.price), date: p.date, status: p.status,
+        items: p.po_items?.map((pi: any) => ({ productId: pi.product_id, qty: Number(pi.qty), price: Number(pi.price) })) || []
+      })));
+    }
+    setOrdersLoading(false);
+  };
+
+  useEffect(() => {
+    fetchPurchaseOrders();
+  }, []);
 
   const handleCreatePO = async (newOrder: Order) => {
     // Optimistic UI
@@ -38,13 +63,18 @@ export default function InventoryPage() {
 
     // DB Sync
     const res = await savePurchaseOrderAction(newOrder);
-    if (res?.error) alert("Lỗi tạo PO: " + res.error);
+    if (res?.error) {
+      alert("Lỗi tạo PO: " + res.error);
+    } else {
+      fetchPurchaseOrders();
+    }
   };
 
   const handleConfirmReceiveStock = async (finalPoId: string, grnItems: GrnItem[]) => {
     // Gửi lệnh nhập kho (Sẽ tự chuyển PO sang Đã nhập kho và cập nhật công nợ)
     await receiveStockFromPO(finalPoId, grnItems);
     setIsReceivingStock(false);
+    fetchPurchaseOrders(); // Refetch orders to get updated status
   };
 
   const handleAddProduct = async (newProduct: InventoryItem) => {
@@ -61,9 +91,18 @@ export default function InventoryPage() {
     if (res?.error) alert("Lỗi sửa SP: " + res.error);
   };
 
-  const handleEditPo = (updatedPo: Order) => {
+  const handleEditPo = async (updatedPo: Order) => {
+    // Optimistic UI
     setOrders(orders.map(o => o.id === updatedPo.id ? updatedPo : o));
     setEditingPO(null);
+
+    // DB Sync
+    const res = await savePurchaseOrderAction(updatedPo);
+    if (res?.error) {
+      alert("Lỗi sửa PO: " + res.error);
+    } else {
+      fetchPurchaseOrders();
+    }
   };
 
 

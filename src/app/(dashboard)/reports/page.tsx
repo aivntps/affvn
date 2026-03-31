@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Filter, Calendar, TrendingUp, Package, Users, DollarSign } from "lucide-react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
@@ -8,17 +8,60 @@ import {
   BarChart, Bar
 } from "recharts";
 
-import { useGlobalData } from "@/lib/store/GlobalContext";
-import { useMemo } from "react";
-
 const COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 const formatCurrency = (value: number) => new Intl.NumberFormat("vi-VN").format(value) + " đ";
 const formatMillions = (value: number) => value + "M";
 
 export default function ReportsPage() {
-  const { saleOrders, inventory } = useGlobalData();
   const [reportPeriod, setReportPeriod] = useState("Năm 2026");
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    uniqueCustomers: 0,
+    totalItemsSold: 0,
+    MONTHLY_REVENUE: [] as any[],
+    PRODUCT_SHARE: [] as any[],
+    TOP_AGENTS: [] as any[],
+    BEST_SELLERS: [] as any[]
+  });
+
+  useEffect(() => {
+    let active = true;
+    const fetchReport = async () => {
+      setLoading(true);
+      const yearMatch = reportPeriod.match(/20\d{2}/);
+      const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+
+      const qMatch = reportPeriod.match(/Quý (\d)/);
+      const quarter = qMatch ? parseInt(qMatch[1]) : null;
+
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      
+      const { data: rpcData, error } = await supabase.rpc('get_report_data', {
+        p_year: year,
+        p_quarter: quarter
+      });
+
+      if (active && !error && rpcData) {
+        setData({
+          totalRevenue: rpcData.totalRevenue || 0,
+          totalOrders: rpcData.totalOrders || 0,
+          uniqueCustomers: rpcData.uniqueCustomers || 0,
+          totalItemsSold: rpcData.totalItemsSold || 0,
+          MONTHLY_REVENUE: rpcData.MONTHLY_REVENUE || [],
+          PRODUCT_SHARE: rpcData.PRODUCT_SHARE?.length > 0 ? rpcData.PRODUCT_SHARE : [{ name: "Chưa có dl", value: 1 }],
+          TOP_AGENTS: rpcData.TOP_AGENTS || [],
+          BEST_SELLERS: rpcData.BEST_SELLERS || []
+        });
+      }
+      if (active) setLoading(false);
+    };
+    fetchReport();
+    return () => { active = false; };
+  }, [reportPeriod]);
 
   const {
     totalRevenue,
@@ -29,100 +72,7 @@ export default function ReportsPage() {
     PRODUCT_SHARE,
     TOP_AGENTS,
     BEST_SELLERS
-  } = useMemo(() => {
-    const yearMatch = reportPeriod.match(/20\d{2}/);
-    const year = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
-
-    const qMatch = reportPeriod.match(/Quý (\d)/);
-    const quarter = qMatch ? parseInt(qMatch[1]) : null;
-
-    // Lọc đơn hàng hợp lệ
-    const validOrders = saleOrders.filter(o => {
-      if (o.status === "Đã hủy" || o.status === "Chờ duyệt") return false;
-      const d = new Date(o.date);
-      if (d.getFullYear() !== year) return false;
-      if (quarter) {
-        const q = Math.floor(d.getMonth() / 3) + 1;
-        if (q !== quarter) return false;
-      }
-      return true;
-    });
-
-    // 1. Tổng quan
-    const totalRev = validOrders.reduce((acc, o) => acc + o.total, 0);
-    const orderCount = validOrders.length;
-    const uniqCust = new Set(validOrders.map(o => o.customerId)).size;
-    const itemsSold = validOrders.reduce((acc, o) => acc + o.items.reduce((sum, item) => sum + item.qty, 0), 0);
-
-    // 2. Biểu đồ mảng doanh thu theo tháng (Chỉ update nếu filter năm)
-    const monthlyRevMap = Array(12).fill(0);
-    validOrders.forEach(o => {
-      const d = new Date(o.date);
-      monthlyRevMap[d.getMonth()] += o.total / 1000000; // Triệu VNĐ
-    });
-    const monthly = monthlyRevMap.map((sum, i) => ({ name: `T${i + 1}`, sum: Math.round(sum * 10) / 10 }));
-
-    // 3. Tỷ trọng ngành hàng
-    const getCategory = (name: string) => {
-      const lower = name.toLowerCase();
-      if (lower.includes("sữa")) return "Sữa";
-      if (lower.includes("trái cây") || lower.includes("nước ép")) return "Nước trái cây";
-      if (lower.includes("nước")) return "Nước giải khát";
-      if (lower.includes("bia")) return "Bia";
-      return "Khác";
-    };
-    const categoryRev: Record<string, number> = {};
-    validOrders.forEach(o => {
-      o.items.forEach(item => {
-        const invItem = inventory.find(p => p.sku === item.productId);
-        const cat = invItem ? getCategory(invItem.name) : "Khác";
-        categoryRev[cat] = (categoryRev[cat] || 0) + (item.qty * item.price);
-      });
-    });
-    const share = Object.entries(categoryRev)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5); // Hiển thị top 5 danh mục
-
-    // 4. Top đại lý
-    const agentRev: Record<string, number> = {};
-    validOrders.forEach(o => {
-      if (o.customerName) {
-        agentRev[o.customerName] = (agentRev[o.customerName] || 0) + o.total;
-      }
-    });
-    const topAgents = Object.entries(agentRev)
-      .map(([name, sum]) => ({ name, sales: Math.round(sum / 1000000) })) // Triệu VNĐ
-      .sort((a, b) => b.sales - a.sales)
-      .slice(0, 5);
-
-    // 5. Sản phẩm bán chạy
-    const productSales: Record<string, { name: string; qty: number; revenue: number }> = {};
-    validOrders.forEach(o => {
-      o.items.forEach(item => {
-        if (!productSales[item.productId]) {
-          productSales[item.productId] = { name: item.name, qty: 0, revenue: 0 };
-        }
-        productSales[item.productId].qty += item.qty;
-        productSales[item.productId].revenue += (item.qty * item.price);
-      });
-    });
-    const bestSellers = Object.values(productSales)
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5)
-      .map((item, i) => ({ id: i + 1, ...item }));
-
-    return {
-      totalRevenue: totalRev,
-      totalOrders: orderCount,
-      uniqueCustomers: uniqCust,
-      totalItemsSold: itemsSold,
-      MONTHLY_REVENUE: monthly,
-      PRODUCT_SHARE: share.length > 0 ? share : [{ name: "Chưa có dl", value: 1 }],
-      TOP_AGENTS: topAgents,
-      BEST_SELLERS: bestSellers
-    };
-  }, [saleOrders, inventory, reportPeriod]);
+  } = data;
 
   return (
     <div className="flex flex-col h-full space-y-4">
@@ -149,6 +99,12 @@ export default function ReportsPage() {
           </div>
         </div>
       </div>
+
+      {loading && (
+        <div className="absolute inset-0 bg-white/50 backdrop-blur-sm z-50 flex items-center justify-center -m-4 sm:-m-6">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
