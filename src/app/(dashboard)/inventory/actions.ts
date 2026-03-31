@@ -36,6 +36,7 @@ export const getCachedInventory = unstable_cache(
     const { data, error } = await supabaseAdmin.from('inventory')
       .select('sku, name, spec, storage_unit, conversion_rate, stock, price, retail_price, days_to_reorder, exp_date, status, inventory_batches(exp_date, qty)')
       .order('created_at', { ascending: false })
+      .limit(3000)
       
     if (error) throw error
     return data || []

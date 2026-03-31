@@ -34,14 +34,14 @@ export default function DebtManagementPage() {
       const start = new Date(currentYear, currentMonth, 1).toLocaleDateString("en-CA"); // YYYY-MM-DD
       const end = new Date(currentYear, currentMonth + 1, 0).toLocaleDateString("en-CA");
       
-      const { data: soData } = await supabase.from('sale_orders').select('total').eq('status', 'Đã thanh toán').gte('date', start).lte('date', end);
-      if (active && soData) {
-        setCollectedThisMonth(soData.reduce((sum: number, item: any) => sum + Number(item.total), 0));
-      }
-
-      const { data: poData } = await supabase.from('purchase_orders').select('qty, price').in('status', ['Đã thanh toán', 'Đã nhập kho']).gte('date', start).lte('date', end);
-      if (active && poData) {
-        setPaidThisMonth(poData.reduce((sum: number, item: any) => sum + (Number(item.qty) * Number(item.price)), 0));
+      const { data, error } = await supabase.rpc('get_company_financials_by_month', {
+        p_start_date: start,
+        p_end_date: end
+      });
+      
+      if (active && data && data.length > 0) {
+        setCollectedThisMonth(Number(data[0].total_collected) || 0);
+        setPaidThisMonth(Number(data[0].total_paid) || 0);
       }
     };
     loadMonthlyData();
@@ -76,7 +76,9 @@ export default function DebtManagementPage() {
       const { data } = await supabase
         .from('debt_invoices')
         .select('*')
-        .or(`customer_id.eq.${selectedEntity.id},supplier_id.eq.${selectedEntity.id}`);
+        .or(`customer_id.eq.${selectedEntity.id},supplier_id.eq.${selectedEntity.id}`)
+        .order('created_at', { ascending: false })
+        .limit(200);
       
       if (data) {
         setDetailInvoices(data);

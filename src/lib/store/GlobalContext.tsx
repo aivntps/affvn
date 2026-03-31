@@ -164,7 +164,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
       { data: settingsData }
     ] = await Promise.all([
       getCachedInventory(),
-      supabase.from('suppliers').select('id, name, contact, category, address, debt, status').order('created_at', { ascending: false }),
+      supabase.from('suppliers').select('id, name, contact, category, address, debt, status').order('created_at', { ascending: false }).limit(300),
       supabase.from('ho_so_nhan_vien').select('id, tai_khoan, ho_ten, vai_tro, khu_vuc_quan_ly'),
       supabase.from('company_info').select('name, tax_id, address, email, phone, logo_url').eq('id', 1).single(),
       supabase.from('app_settings').select('value').eq('key', 'inventory_config').single()

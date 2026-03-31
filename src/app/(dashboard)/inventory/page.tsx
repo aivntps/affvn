@@ -41,7 +41,8 @@ export default function InventoryPage() {
     const { data: poData } = await supabase
       .from('purchase_orders')
       .select('id, supplier, qty, spec, price, date, status, po_items(product_id, qty, price)')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(300);
     
     if (poData) {
       setOrders(poData.map((p: any) => ({
