@@ -311,7 +311,7 @@ export default function SettingsPage() {
                   <h4 className="font-bold text-gray-900 mb-2">1. Nhập kho & Bổ sung hàng hóa</h4>
                   <div className="text-sm text-gray-600 space-y-2">
                     <p>• <b>Đặt hàng:</b> Tạo đơn nhập hàng, khi tạo xong đơn sẽ ở trạng thái <b>"Hàng chờ về"</b> (chưa update tồn kho, có thể sửa đơn).</p>
-                    <p>• <b>Hàng về:</b> Dùng chức năng <b>"Nhập kho"</b> (theo đơn đã đặt) để nhập số lô và Date thực tế vào kho.</p>
+                    <p>• <b>Hàng về:</b> Dùng chức năng <b>"Nhập kho"</b> (theo đơn đã đặt) để nhập Date thực tế vào kho.</p>
                   </div>
                 </div>
 
