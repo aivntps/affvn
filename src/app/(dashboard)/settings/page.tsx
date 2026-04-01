@@ -303,7 +303,6 @@ export default function SettingsPage() {
               <BookOpen className="w-6 h-6 text-blue-600" />
               Hướng dẫn & Tài liệu
             </h2>
-            <p className="text-gray-500">Tài liệu tham khảo nhanh giúp bạn thao tác trơn tru trên hệ thống AFF Inventory.</p>
           </div>
 
           <div className="space-y-8">
