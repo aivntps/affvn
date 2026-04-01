@@ -83,12 +83,12 @@ export default function SalesStatisticsTab() {
 
   const totalSales = useMemo(() => {
     return filteredData
-      .filter(row => row.status === "Chưa TT" || row.status === "Đã thanh toán")
-      .reduce((sum, row) => sum + row.totalRevenue, 0);
+      .filter((row: any) => row.status === "Chưa TT" || row.status === "Đã thanh toán")
+      .reduce((sum: number, row: any) => sum + row.totalRevenue, 0);
   }, [filteredData]);
 
   const totalOrders = useMemo(() => {
-    return filteredData.reduce((sum, row) => sum + row.orderCount, 0);
+    return filteredData.reduce((sum: number, row: any) => sum + row.orderCount, 0);
   }, [filteredData]);
 
   const salesByStaff = useMemo(() => {
@@ -176,7 +176,7 @@ export default function SalesStatisticsTab() {
               className="w-full pl-9 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer"
             >
               {statuses.map(s => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>{s === "Đã thanh toán" ? "Đã TT" : s}</option>
               ))}
             </select>
           </div>

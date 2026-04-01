@@ -169,7 +169,7 @@ export default function OrdersPage() {
               <option value="Chờ duyệt">Chờ duyệt</option>
               <option value="Đang giao">Đang giao</option>
               <option value="Chưa TT">Chưa TT</option>
-              <option value="Đã thanh toán">Đã thanh toán</option>
+              <option value="Đã thanh toán">Đã TT</option>
               <option value="Đã hủy">Đã hủy</option>
             </select>
           </div>
@@ -227,7 +227,7 @@ export default function OrdersPage() {
                           order.status === 'Chưa TT' ? 'bg-amber-50 text-amber-600 border-amber-200' :
                           order.status === 'Đã thanh toán' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-500 border-red-200'
                         }`}>
-                          {order.status}
+                          {order.status === 'Đã thanh toán' ? 'Đã TT' : order.status}
                         </span>
                         
                         {/* Quick action buttons next to status text (only for admin) */}

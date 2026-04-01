@@ -32,7 +32,7 @@ export default function OrderDetailModal({
               <span className="text-gray-300">|</span>
               <span className="text-gray-500">Nhân viên: <span className="font-medium text-gray-700">{order.staffName}</span></span>
               <span className="text-gray-300">|</span>
-              <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{order.status}</span>
+              <span className="font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded">{order.status === 'Đã thanh toán' ? 'Đã TT' : order.status}</span>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-50 transition-colors">

@@ -55,7 +55,7 @@ export default function UpdateOrderStatusModal({
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl text-sm font-medium focus:ring-0 focus:border-blue-600 outline-none transition-colors cursor-pointer"
             >
               {allowedOptions.map(opt => (
-                <option key={opt} value={opt}>{opt}</option>
+                <option key={opt} value={opt}>{opt === "Đã thanh toán" ? "Đã TT" : opt}</option>
               ))}
             </select>
             

@@ -49,3 +49,6 @@ supabase_seed.sql
 supabase_setup.sql
 *.log
 .agents/
+
+.vercel
+.env*.local

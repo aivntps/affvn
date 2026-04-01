@@ -137,7 +137,7 @@ export default function DashboardPage() {
                           order.status === 'Chưa TT' ? 'bg-amber-50 text-amber-600 border-amber-200' :
                           order.status === 'Đã thanh toán' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-500 border-red-200'
                         }`}>
-                          {order.status}
+                          {order.status === 'Đã thanh toán' ? 'Đã TT' : order.status}
                         </span>
                       </td>
                     </tr>
