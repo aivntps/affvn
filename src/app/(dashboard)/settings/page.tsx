@@ -316,7 +316,15 @@ export default function SettingsPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="border border-gray-100 rounded-lg p-5 bg-white shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2">1. Quy trình bán hàng & Xuất kho</h4>
+                  <h4 className="font-bold text-gray-900 mb-2">1. Nhập kho & Bổ sung hàng hóa</h4>
+                  <div className="text-sm text-gray-600 space-y-2">
+                    <p>• <b>Đặt hàng:</b> Tạo lệnh mua hàng từ Nhà cung cấp.</p>
+                    <p>• <b>Hàng về:</b> Dùng chức năng <b>"Hàng đã về"</b> để nhập số lô và Date thực tế vào Supabase.</p>
+                  </div>
+                </div>
+
+                <div className="border border-gray-100 rounded-lg p-5 bg-white shadow-sm">
+                  <h4 className="font-bold text-gray-900 mb-2">2. Quy trình bán hàng & Xuất kho</h4>
                   <div className="text-sm text-gray-600 space-y-2">
                     <p>• <b>Tạo đơn:</b> Lên đơn hàng xong sẽ ở trạng thái <b>"Chờ duyệt"</b>, chưa update tồn kho.</p>
                     <p>• <b>Xuất kho:</b> Đổi sang <b>"Đang giao"</b> hoặc <b>"Chưa TT"</b> để hệ thống tự động trừ tồn kho thật.</p>
@@ -325,18 +333,10 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="border border-gray-100 rounded-lg p-5 bg-white shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2">2. Hủy đơn & Tự động Hoàn tồn</h4>
+                  <h4 className="font-bold text-gray-900 mb-2">3. Hủy đơn & Tự động Hoàn tồn</h4>
                   <div className="text-sm text-gray-600 space-y-2">
                     <p>• Khi đơn báo <b>"Đã hủy"</b>, hàng tự động trả lại kho.</p>
                     <p>• <b>Hạn dùng hoàn trả:</b> Tự động hóa thiết lập **6 tháng từ ngày trả** cho lô hàng mới nhập lại.</p>
-                  </div>
-                </div>
-
-                <div className="border border-gray-100 rounded-lg p-5 bg-white shadow-sm">
-                  <h4 className="font-bold text-gray-900 mb-2">3. Nhập kho & Bổ sung hàng hóa</h4>
-                  <div className="text-sm text-gray-600 space-y-2">
-                    <p>• <b>Đặt hàng:</b> Tạo lệnh mua hàng từ Nhà cung cấp.</p>
-                    <p>• <b>Hàng về:</b> Dùng chức năng <b>"Hàng đã về"</b> để nhập số lô và Date thực tế vào Supabase.</p>
                   </div>
                 </div>
 
