@@ -336,7 +336,7 @@ export default function SettingsPage() {
                   <h4 className="font-bold text-gray-900 mb-2">3. Hủy đơn & Tự động Hoàn tồn</h4>
                   <div className="text-sm text-gray-600 space-y-2">
                     <p>• Khi đơn báo <b>"Đã hủy"</b>, hàng tự động trả lại kho.</p>
-                    <p>• <b>Hạn dùng hoàn trả:</b> Tự động hóa thiết lập **6 tháng từ ngày trả** cho lô hàng mới nhập lại.</p>
+                    <p>• <b>Hạn dùng hoàn trả:</b> Tự động hóa thiết lập <b>"6 tháng từ ngày trả"</b> cho lô hàng mới nhập lại (có thể thay đổi trong phần Kho hàng/ Cài đặt kho).</p>
                   </div>
                 </div>
 
