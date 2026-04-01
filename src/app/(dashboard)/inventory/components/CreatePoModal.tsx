@@ -8,7 +8,6 @@ import { formatCurrency } from "../utils";
 export function CreatePoModal({
   suppliers,
   inventory,
-  orderCount,
   onClose,
   onSave
 }: {
@@ -27,6 +26,7 @@ export function CreatePoModal({
     setPoItems([...poItems, { id: Date.now(), productId: inventory[0]?.sku || "", qty: 1, price: inventory[0]?.price || 0 }]);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updatePoItem = (id: number, field: keyof PoItem, value: any) => {
     setPoItems(poItems.map(item => item.id === id ? { ...item, [field]: value } : item));
   };

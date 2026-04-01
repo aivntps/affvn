@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, Box, AlertTriangle, DollarSign, Edit, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Filter, Edit, ChevronDown, ChevronRight } from 'lucide-react';
 import { InventoryItem } from '../types';
 import { formatCurrency, getRopColor } from '../utils';
 import { useGlobalData } from '@/lib/store/GlobalContext';

@@ -11,7 +11,9 @@ export default function DashboardPage() {
     totalRevenue: 0,
     newOrdersToday: 0,
     totalDebt: 0,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expiringBatches: [] as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     recentOrders: [] as any[]
   });
   const [loading, setLoading] = useState(true);
@@ -22,6 +24,7 @@ export default function DashboardPage() {
     async function fetchStats() {
       const { data, error } = await supabase.rpc('get_dashboard_stats');
       if (data && !error) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setStats(data as any);
       }
       setLoading(false);

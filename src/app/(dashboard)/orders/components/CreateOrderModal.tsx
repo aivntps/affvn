@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { X, Trash2 } from "lucide-react";
 import { SaleOrder, SaleOrderItem } from "../types";
 
@@ -9,14 +9,13 @@ import { Customer, InventoryItem } from "@/lib/store/GlobalContext";
 export default function CreateOrderModal({
   user,
   products,
-  orders,
   initialOrder,
   onSave,
   onClose
 }: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   user: any;
   products: InventoryItem[];
-  orders?: SaleOrder[];
   initialOrder?: SaleOrder;
   onSave: (order: SaleOrder) => void;
   onClose: () => void;
@@ -75,6 +74,7 @@ export default function CreateOrderModal({
       setSearchError(error.message);
       setSuggestedCustomers([]);
     } else if (data) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setSuggestedCustomers(data.map((c: any) => ({ ...c, sales: Number(c.sales) })));
       setSearchError(null);
     }

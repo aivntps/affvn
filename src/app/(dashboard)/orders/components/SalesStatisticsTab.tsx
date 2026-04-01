@@ -14,6 +14,7 @@ export default function SalesStatisticsTab() {
   // Mặc định tháng này
   const currentMonth = new Date().toISOString().slice(0, 7);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [aggregatedData, setAggregatedData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -43,6 +44,7 @@ export default function SalesStatisticsTab() {
       });
 
       if (active && data) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setAggregatedData(data.map((d: any) => ({
           staffId: d.staff_id,
           staffName: d.staff_name,

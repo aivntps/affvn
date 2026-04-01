@@ -25,9 +25,10 @@ export default function CustomersPage() {
   const [activeTab, setActiveTab] = useState<"customers" | "regions">("customers");
   const user = useUser();
   const userRegion = user?.khu_vuc_quan_ly || "Tất cả khu vực";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [customers, setCustomers] = useState<any[]>([]);
   const [totalCustomers, setTotalCustomers] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 50;
   const [regions, setRegions] = useState<Region[]>(initialRegions);

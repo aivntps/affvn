@@ -11,7 +11,7 @@ export default function OrderDetailModal({
   order: SaleOrder;
   onClose: () => void;
 }) {
-  const { companyInfo, inventory } = useGlobalData();
+  const { inventory } = useGlobalData();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN").format(amount) + " đ";

@@ -6,12 +6,14 @@ import { Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useGlobalData } from "@/lib/store/GlobalContext";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const UserContext = createContext<any>(null);
 
 export function useUser() {
   return useContext(UserContext);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function ClientLayout({ children, user }: { children: React.ReactNode, user: any }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const pathname = usePathname();

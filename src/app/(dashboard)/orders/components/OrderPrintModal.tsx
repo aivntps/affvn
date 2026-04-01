@@ -2,7 +2,6 @@
 
 import React, { useRef, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Printer } from "lucide-react";
 import { SaleOrder } from "../types";
 import { useGlobalData } from "@/lib/store/GlobalContext";
 

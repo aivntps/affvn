@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { logActivityAction } from '../inventory/actions'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function addCustomerAction(customerData: any) {
   try {
     const supabase = await createClient()
@@ -34,12 +35,14 @@ export async function addCustomerAction(customerData: any) {
     await logActivityAction(`Thêm mới khách hàng ${customerData.name}`)
     revalidatePath('/customers')
     return { data: dbCustomer, error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch addCustomerAction:", err)
     return { error: err.message || "Lỗi hệ thống không xác định" }
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateCustomerAction(customerData: any) {
   try {
     const supabase = await createClient()
@@ -62,6 +65,7 @@ export async function updateCustomerAction(customerData: any) {
     await logActivityAction(`Sửa thông tin khách hàng ${customerData.name}`)
     revalidatePath('/customers')
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch updateCustomerAction:", err)
     return { error: err.message || "Lỗi hệ thống không xác định" }
@@ -82,6 +86,7 @@ export async function deleteCustomerAction(id: string, name: string) {
     await logActivityAction(`Xóa khách hàng ${name}`)
     revalidatePath('/customers')
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch deleteCustomerAction:", err)
     return { error: err.message || "Lỗi hệ thống không xác định" }

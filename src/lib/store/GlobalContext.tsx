@@ -35,6 +35,7 @@ export interface InventoryItem {
   daysToReorder: number;
   expDate: string;
   status: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   batches?: any[];
 }
 
@@ -56,6 +57,7 @@ export interface PurchaseOrder {
   price: number;
   date: string;
   status: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   items: any[];
 }
 
@@ -69,6 +71,7 @@ export interface SaleOrder {
   paymentDate: string;
   total: number;
   status: "Chờ duyệt" | "Đang giao" | "Chưa TT" | "Đã thanh toán" | "Đã hủy";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   items: any[];
   staffId: string;
   staffName: string;
@@ -139,8 +142,11 @@ interface GlobalContextType {
   setInventoryConfig: React.Dispatch<React.SetStateAction<InventoryConfig>>;
 
   updateSaleOrderStatus: (orderId: string, newStatus: SaleOrder["status"]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   receiveStockFromPO: (poId: string, batches?: any[]) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   saveCompanyInfoAction: (info: any) => Promise<{ error: string | null }>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   saveInventoryConfigAction?: (config: any) => Promise<{ error: string | null }>;
 }
 
@@ -173,17 +179,21 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
 
     
     if (invData) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setInventory(invData.map((i: any) => ({
         sku: i.sku, name: i.name, spec: i.spec, storageUnit: i.storage_unit, conversionRate: Number(i.conversion_rate), stock: Number(i.stock), price: Number(i.price), retailPrice: Number(i.retail_price || 0), daysToReorder: Number(i.days_to_reorder), expDate: i.exp_date, status: i.status,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         batches: i.inventory_batches?.map((b: any) => ({ expDate: b.exp_date, qty: Number(b.qty) })) || []
       })));
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (supData) setSuppliers(supData.map((s: any) => ({ id: s.id, name: s.name, contact: s.contact, category: s.category, address: s.address, debt: Number(s.debt), status: s.status })));
     
 
 
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (staffData) setStaffList(staffData.map((s: any) => ({ id: s.id, tai_khoan: s.tai_khoan, ho_ten: s.ho_ten, vai_tro: s.vai_tro, khu_vuc_quan_ly: s.khu_vuc_quan_ly })));
 
     if (compData) {
@@ -228,6 +238,7 @@ export function GlobalProvider({ children }: { children: ReactNode }) {
   };
 
   // LOGIC: Receive Stock via Server Actions RPC
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const receiveStockFromPO = async (poId: string, batches?: any[]) => {
     if (!batches || batches.length === 0) return;
     

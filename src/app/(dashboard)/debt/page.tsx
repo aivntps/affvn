@@ -9,14 +9,22 @@ import { useGlobalData } from "@/lib/store/GlobalContext";
 export default function DebtManagementPage() {
   const [activeTab, setActiveTab] = useState<"phai_thu" | "phai_tra">("phai_thu");
   const [searchTerm, setSearchTerm] = useState("");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedEntity, setSelectedEntity] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [remindEntity, setRemindEntity] = useState<any>(null);
 
   const { suppliers } = useGlobalData();
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [phaiThuList, setPhaiThuList] = useState<any[]>([]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [detailInvoices, setDetailInvoices] = useState<any[]>([]);
   const [overdueDebt, setOverdueDebt] = useState(0);
+
+  const [detailPage, setDetailPage] = useState(1);
+  const [totalDetail, setTotalDetail] = useState(0);
+  const DETAIL_PAGE_SIZE = 20;
 
   // Tính toán các con số tổng quan
   const currentMonth = new Date().getMonth();
@@ -34,7 +42,7 @@ export default function DebtManagementPage() {
       const start = new Date(currentYear, currentMonth, 1).toLocaleDateString("en-CA"); // YYYY-MM-DD
       const end = new Date(currentYear, currentMonth + 1, 0).toLocaleDateString("en-CA");
       
-      const { data, error } = await supabase.rpc('get_company_financials_by_month', {
+      const { data, error: _error } = await supabase.rpc('get_company_financials_by_month', {
         p_start_date: start,
         p_end_date: end
       });
@@ -56,6 +64,8 @@ export default function DebtManagementPage() {
       const { data } = await supabase.rpc('get_customer_debts_summary');
       if (active && data) {
         setPhaiThuList(data);
+         
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const overdue = data.filter((d: any) => d.status === 'Quá hạn').reduce((sum: number, d: any) => sum + d.total_debt, 0);
         setOverdueDebt(overdue);
       }
@@ -68,30 +78,35 @@ export default function DebtManagementPage() {
   useEffect(() => {
     if (!selectedEntity) {
       setDetailInvoices([]);
+      setDetailPage(1);
+      setTotalDetail(0);
       return;
     }
     const fetchDetails = async () => {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
-      const { data } = await supabase
+      const { data, count } = await supabase
         .from('debt_invoices')
-        .select('*')
+        .select('*', { count: 'exact' })
         .or(`customer_id.eq.${selectedEntity.id},supplier_id.eq.${selectedEntity.id}`)
         .order('created_at', { ascending: false })
-        .limit(200);
+        .range((detailPage - 1) * DETAIL_PAGE_SIZE, detailPage * DETAIL_PAGE_SIZE - 1);
       
       if (data) {
         setDetailInvoices(data);
+        if (count !== null) setTotalDetail(count);
       }
     };
     fetchDetails();
-  }, [selectedEntity]);
+  }, [selectedEntity, detailPage]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const phaiTraList = suppliers.map((s: any) => {
     return { id: s.id, name: s.name, total_debt: s.debt, due_date: "N/A", status: "Trong hạn", last_tx: "N/A" };
   });
 
   const data = activeTab === "phai_thu" ? phaiThuList : phaiTraList;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const totalSummaryDebt = data.reduce((sum: number, item: any) => sum + item.total_debt, 0);
 
   return (
@@ -197,7 +212,10 @@ export default function DebtManagementPage() {
                   <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
                     <td 
                       className="px-6 py-4 font-medium text-blue-600 cursor-pointer hover:underline"
-                      onClick={() => setSelectedEntity(item)}
+                      onClick={() => {
+                        setSelectedEntity(item);
+                        setDetailPage(1);
+                      }}
                     >
                       {item.name}
                     </td>
@@ -276,6 +294,7 @@ export default function DebtManagementPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
+                      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                       {detailInvoices.map((inv: any, idx: number) => (
                         <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-5 py-3 font-medium text-blue-600 cursor-pointer hover:underline" onClick={() => alert("Mở chi tiết đơn hàng: " + inv.id)}>{inv.id}</td>
@@ -308,7 +327,32 @@ export default function DebtManagementPage() {
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end px-6 py-4 border-t border-gray-100 bg-white rounded-b-2xl gap-3">
+            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white rounded-b-2xl">
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                {totalDetail > 0 ? (
+                  <>
+                    <span>Hiển thị {(detailPage - 1) * DETAIL_PAGE_SIZE + 1} - {Math.min(detailPage * DETAIL_PAGE_SIZE, totalDetail)} / {totalDetail} đơn nợ</span>
+                    <div className="flex gap-1 ml-4">
+                      <button 
+                        disabled={detailPage === 1}
+                        onClick={() => setDetailPage(detailPage - 1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                      >
+                        Trước
+                      </button>
+                      <button 
+                        disabled={detailPage * DETAIL_PAGE_SIZE >= totalDetail}
+                        onClick={() => setDetailPage(detailPage + 1)}
+                        className="px-2 py-1 border rounded disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                      >
+                        Tiếp
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <span>Không có dữ liệu</span>
+                )}
+              </div>
               <button onClick={() => setSelectedEntity(null)} className="px-6 py-2.5 border border-gray-200 text-gray-600 rounded-xl hover:bg-gray-50 font-medium transition-colors">
                 Trở về
               </button>

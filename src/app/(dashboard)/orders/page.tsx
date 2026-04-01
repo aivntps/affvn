@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { Plus, Search, Filter, Edit, Printer, Info, Truck, CheckCircle2, List, BarChart3 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Search, Filter, Edit, Printer } from "lucide-react";
 import { useUser } from "@/components/layout/ClientLayout";
 import { SaleOrder, OrderStatus } from "./types";
 import CreateOrderModal from "./components/CreateOrderModal";
@@ -33,7 +33,7 @@ export default function OrdersPage() {
 
   const [localOrders, setLocalOrders] = useState<SaleOrder[]>([]);
   const [totalOrders, setTotalOrders] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
@@ -64,8 +64,11 @@ export default function OrdersPage() {
 
     const { data, count, error } = await query;
     if (data && !error) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const formattedData: SaleOrder[] = data.map((s: any) => ({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customers?.type || 'N/A', customerRegion: s.customers?.region || 'N/A', customerPhone: s.customers?.phone || 'N/A', date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items: (s.sale_order_items || []).map((i: any) => ({
           productId: i.product_id, productName: i.inventory?.name || 'Sản phẩm không xác định', quantity: i.qty, price: i.price,
         }))

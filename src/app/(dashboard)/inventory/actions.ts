@@ -71,6 +71,7 @@ export async function updateSaleOrderStatus(orderId: string, newStatus: string) 
     revalidateTag('inventory') // Revalidate cache ngay lập tức khi trạng thái giao hàng ảnh hưởng kho
     await logActivityAction(`Cập nhật trạng thái đơn hàng #${orderId} thành ${newStatus}`);
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Cập nhật trạng thái đơn hàng #${orderId} thành ${newStatus}`, 'Thất bại');
@@ -78,6 +79,7 @@ export async function updateSaleOrderStatus(orderId: string, newStatus: string) 
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function receiveStockFromPO(poId: string, batches: any[]) {
   try {
     const supabase = await createClient()
@@ -111,6 +113,7 @@ export async function receiveStockFromPO(poId: string, batches: any[]) {
     revalidateTag('inventory') // Revalidate kho sau khi nhập
     await logActivityAction(`Nhập kho lô hàng từ PO #${poId}`);
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Nhập kho lô hàng từ PO #${poId}`, 'Thất bại');
@@ -118,6 +121,7 @@ export async function receiveStockFromPO(poId: string, batches: any[]) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveSaleOrderAction(order: any) {
   try {
     const supabase = await createClient()
@@ -139,6 +143,7 @@ export async function saveSaleOrderAction(order: any) {
     
     await supabase.from('sale_order_items').delete().eq('so_id', order.id)
     if (order.items && order.items.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dbItems = order.items.map((i: any) => ({ so_id: order.id, product_id: i.productId, qty: i.qty, price: i.price }))
       const { error: err2 } = await supabase.from('sale_order_items').insert(dbItems)
       if (err2) {
@@ -149,6 +154,7 @@ export async function saveSaleOrderAction(order: any) {
     
     await logActivityAction(`Khởi tạo / Lưu đơn hàng #${order.id}`, 'Thành công', order.staffName);
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Lưu đơn hàng #${order?.id || 'Không rõ'}`, 'Thất bại');
@@ -156,6 +162,7 @@ export async function saveSaleOrderAction(order: any) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function savePurchaseOrderAction(po: any) {
   try {
     const supabase = await createClient()
@@ -173,6 +180,7 @@ export async function savePurchaseOrderAction(po: any) {
     
     await supabase.from('po_items').delete().eq('po_id', po.id)
     if (po.items && po.items.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dbItems = po.items.map((i: any) => ({ po_id: po.id, product_id: i.productId, qty: i.qty, price: i.price }))
       const { error: err2 } = await supabase.from('po_items').insert(dbItems)
       if (err2) {
@@ -182,6 +190,7 @@ export async function savePurchaseOrderAction(po: any) {
     }
     await logActivityAction(`Tạo/Lưu lệnh thu mua PO #${po.id}`);
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Lưu lệnh thu mua PO #${po?.id || 'Không rõ'}`, 'Thất bại');
@@ -189,6 +198,7 @@ export async function savePurchaseOrderAction(po: any) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function addProductAction(p: any) {
   try {
     const supabase = await createClient()
@@ -200,6 +210,8 @@ export async function addProductAction(p: any) {
     }
 
     if (p.batches && p.batches.length > 0) {
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dbB = p.batches.filter((b:any) => b.qty > 0).map((b: any) => ({ 
         sku: p.sku, 
         exp_date: b.expDate || null, 
@@ -214,6 +226,7 @@ export async function addProductAction(p: any) {
     revalidateTag('inventory')
     await logActivityAction(`Thêm sản phẩm mới SKU-${p.sku}`);
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Thêm sản phẩm SKU-${p?.sku || 'Không rõ'}`, 'Thất bại');
@@ -221,6 +234,7 @@ export async function addProductAction(p: any) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateProductAction(p: any) {
   try {
     const supabase = await createClient()
@@ -235,6 +249,8 @@ export async function updateProductAction(p: any) {
     await supabase.from('inventory_batches').delete().eq('sku', p.sku)
     if (p.batches && p.batches.length > 0) {
       // Chỉ lưu các lô có số lượng > 0 theo mặc định
+       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const dbB = p.batches.filter((b:any) => b.qty > 0).map((b: any) => ({ 
         sku: p.sku, 
         exp_date: b.expDate || null, 
@@ -249,6 +265,7 @@ export async function updateProductAction(p: any) {
     revalidateTag('inventory')
     await logActivityAction(`Cập nhật thông tin sản phẩm SKU-${p.sku}`);
     return { error: null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Cập nhật sản phẩm SKU-${p?.sku || 'Không rõ'}`, 'Thất bại');
@@ -268,6 +285,7 @@ export async function deleteProductAction(sku: string) {
       await logActivityAction(`Xóa sản phẩm SKU-${sku}`, 'Thất bại');
     }
     return { error: error?.message || null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Xóa sản phẩm SKU-${sku}`, 'Thất bại');
@@ -275,30 +293,35 @@ export async function deleteProductAction(sku: string) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function addSupplierAction(s: any) {
   try {
     const supabase = await createClient()
     const dbS = { id: s.id, name: s.name, contact: s.contact, category: s.category, address: s.address, debt: s.debt, status: s.status }
     const { error } = await supabase.from('suppliers').insert(dbS)
     return { error: error?.message || null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     return { error: err.message || "Lỗi hệ thống không xác định" }
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function updateSupplierAction(s: any) {
   try {
     const supabase = await createClient()
     const dbS = { name: s.name, contact: s.contact, category: s.category, address: s.address, status: s.status }
     const { error } = await supabase.from('suppliers').update(dbS).eq('id', s.id)
     return { error: error?.message || null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     return { error: err.message || "Lỗi hệ thống không xác định" }
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveCompanyInfoAction(info: any) {
   try {
     const supabase = await createClient()
@@ -318,6 +341,7 @@ export async function saveCompanyInfoAction(info: any) {
       await logActivityAction(`Cập nhật thông tin công ty`);
     }
     return { error: error?.message || null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     await logActivityAction(`Cập nhật thông tin công ty`, 'Thất bại');
@@ -325,6 +349,7 @@ export async function saveCompanyInfoAction(info: any) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function saveInventoryConfigAction(config: any) {
   try {
     const supabase = await createClient()
@@ -332,6 +357,7 @@ export async function saveInventoryConfigAction(config: any) {
       .from('app_settings')
       .upsert({ key: 'inventory_config', value: config })
     return { error: error?.message || null }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.error("Lỗi try-catch:", err);
     return { error: err.message || "Lỗi hệ thống không xác định" }

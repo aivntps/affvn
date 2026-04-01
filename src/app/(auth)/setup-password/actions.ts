@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function setupPassword(prevState: any, formData: FormData) {
   const supabase = await createClient()
   const password = formData.get('password') as string

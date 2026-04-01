@@ -28,6 +28,7 @@ const menuItems = [
   { name: "Cài đặt", href: "/settings", icon: Settings },
 ];
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function Sidebar({ user, onClose }: { user?: any, onClose?: () => void }) {
   const { companyInfo } = useGlobalData();
   const pathname = usePathname();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Filter, Calendar, TrendingUp, Package, Users, DollarSign } from "lucide-react";
+import { Filter, TrendingUp, Package, Users, DollarSign } from "lucide-react";
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
@@ -21,9 +21,13 @@ export default function ReportsPage() {
     totalOrders: 0,
     uniqueCustomers: 0,
     totalItemsSold: 0,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     MONTHLY_REVENUE: [] as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     PRODUCT_SHARE: [] as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     TOP_AGENTS: [] as any[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     BEST_SELLERS: [] as any[]
   });
 
@@ -142,6 +146,7 @@ export default function ReportsPage() {
                 <RechartsTooltip 
                   cursor={{ stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5 5' }}
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(value: any) => [`${value} Triệu VNĐ`, 'Doanh thu']}
                 />
                 <Line type="monotone" dataKey="sum" stroke="#3b82f6" strokeWidth={4} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 8, stroke: '#1d4ed8', strokeWidth: 2 }} />
@@ -174,6 +179,7 @@ export default function ReportsPage() {
                   </Pie>
                   <RechartsTooltip 
                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                      formatter={(value: any) => [`${value}%`, 'Tỷ trọng']}
                   />
                   <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 500, color: '#4B5563' }} />
@@ -194,6 +200,7 @@ export default function ReportsPage() {
                   <RechartsTooltip 
                     cursor={{ fill: '#f3f4f6' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     formatter={(value: any) => [`${value} Triệu VNĐ`, 'Doanh số']}
                   />
                   <Bar dataKey="sales" fill="#10b981" radius={[0, 4, 4, 0]} barSize={20} />

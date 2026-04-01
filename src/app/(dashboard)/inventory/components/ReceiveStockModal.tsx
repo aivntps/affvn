@@ -39,6 +39,7 @@ export function ReceiveStockModal({
     setGrnItems([...grnItems, { id: Date.now(), productId: "", qty: 1, price: 0, expDate: "" }]);
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updateGrnItem = (id: number, field: keyof GrnItem, value: any) => {
     setGrnItems(grnItems.map(item => item.id === id ? { ...item, [field]: value } : item));
   };

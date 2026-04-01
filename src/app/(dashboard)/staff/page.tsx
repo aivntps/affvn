@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, Suspense } from "react";
+import { useMemo, Suspense } from "react";
 import AddStaffModal from "./AddStaffModal";
 import StaffItemActions, { Staff } from "./StaffItemActions";
 import StaffFilters from "./StaffFilters";

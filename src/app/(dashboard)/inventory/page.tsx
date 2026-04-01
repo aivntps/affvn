@@ -1,14 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Box, Users, X, Trash2 } from "lucide-react";
+import { Plus, X } from "lucide-react";
 
 import { InventoryTab } from "./components/InventoryTab";
 import { OrdersTab } from "./components/OrdersTab";
 import { SuppliersTab } from "./components/SuppliersTab";
 import { SettingsTab } from "./components/SettingsTab";
-import { formatCurrency } from "./utils";
-import { InventoryItem, Order, Supplier, GrnItem, PoItem } from "./types";
+import { InventoryItem, Order, Supplier, GrnItem } from "./types";
 
 import { useGlobalData } from "@/lib/store/GlobalContext";
 import { addProductAction, updateProductAction, deleteProductAction, addSupplierAction, updateSupplierAction, savePurchaseOrderAction } from "./actions";
@@ -33,7 +32,7 @@ export default function InventoryPage() {
   const { inventory, setInventory, suppliers, setSuppliers, receiveStockFromPO } = useGlobalData();
   
   const [orders, setOrders] = useState<Order[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
+  const [_ordersLoading, setOrdersLoading] = useState(true);
 
   const fetchPurchaseOrders = async () => {
     setOrdersLoading(true);
@@ -46,8 +45,10 @@ export default function InventoryPage() {
       .limit(300);
     
     if (poData) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setOrders(poData.map((p: any) => ({
         id: p.id, supplier: p.supplier, qty: Number(p.qty), spec: p.spec, price: Number(p.price), date: p.date, status: p.status,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items: p.po_items?.map((pi: any) => ({ productId: pi.product_id, qty: Number(pi.qty), price: Number(pi.price) })) || []
       })));
     }

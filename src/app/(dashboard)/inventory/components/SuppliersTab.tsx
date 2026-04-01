@@ -9,7 +9,7 @@ interface SuppliersTabProps {
   setEditingSupplier: (supplier: Supplier) => void;
 }
 
-export function SuppliersTab({ suppliers, setIsAddingSupplier, setEditingSupplier }: SuppliersTabProps) {
+export function SuppliersTab({ suppliers, setIsAddingSupplier: _setIsAddingSupplier, setEditingSupplier }: SuppliersTabProps) {
   return (
     <div className="flex flex-col space-y-6 flex-1">
       {/* Filters */}

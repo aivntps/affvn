@@ -1,17 +1,18 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Building2, HardDrive, History, UploadCloud, Download, CheckCircle2, XCircle, BookOpen, AlertCircle } from 'lucide-react';
-import Image from 'next/image';
+import { Building2, HardDrive, UploadCloud, Download, CheckCircle2, BookOpen, AlertCircle } from 'lucide-react';
 
 import { useGlobalData } from "@/lib/store/GlobalContext";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<"company" | "backup" | "logs" | "guide">("company");
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { companyInfo, setCompanyInfo, saveCompanyInfoAction } = useGlobalData() as any;
 
   const [formData, setFormData] = useState(companyInfo);
   const [logoPreview, setLogoPreview] = useState(companyInfo.logoUrl);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [logs, setLogs] = useState<any[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
 
