@@ -298,13 +298,6 @@ export default function SettingsPage() {
       {/* Tab 4: Guide */}
       {activeTab === "guide" && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sm:p-8 animate-in fade-in duration-300">
-          <div className="mb-8">
-            <h2 className="text-xl font-bold text-gray-900 mb-2 flex items-center gap-2">
-              <BookOpen className="w-6 h-6 text-blue-600" />
-              Hướng dẫn & Tài liệu
-            </h2>
-          </div>
-
           <div className="space-y-8">
             {/* Nhóm 1: Dòng chảy hàng hóa */}
             <section className="space-y-4">
