@@ -328,7 +328,6 @@ export default function OrdersPage() {
         <CreateOrderModal 
           user={user}
           products={inventory}
-          orders={localOrders}
           initialOrder={editingOrder || undefined}
           onSave={handleSaveOrder}
           onClose={() => {
