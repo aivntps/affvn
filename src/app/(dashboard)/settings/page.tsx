@@ -326,9 +326,9 @@ export default function SettingsPage() {
                 <div className="border border-gray-100 rounded-lg p-5 bg-white shadow-sm">
                   <h4 className="font-bold text-gray-900 mb-2">2. Quy trình bán hàng & Xuất kho</h4>
                   <div className="text-sm text-gray-600 space-y-2">
-                    <p>• <b>Tạo đơn:</b> Lên đơn hàng xong sẽ ở trạng thái <b>"Chờ duyệt"</b>, chưa update tồn kho.</p>
-                    <p>• <b>Xuất kho:</b> Đổi sang <b>"Đang giao"</b> hoặc <b>"Chưa TT"</b> để hệ thống tự động trừ tồn kho thật.</p>
-                    <p>• <b>Thanh toán:</b> Đổi sang <b>"Đã TT"</b> để hệ thống update công nợ.</p>
+                    <p>• <b>Tạo đơn:</b> Lên đơn hàng xong sẽ ở trạng thái <b>"Chờ duyệt"</b>, chưa update tồn kho (có thể sửa, hủy đơn).</p>
+                    <p>• <b>Xuất kho:</b> Đổi sang <b>"Đang giao"</b> hoặc <b>"Chưa TT"</b> để hệ thống tự động trừ tồn kho thật (chỉ admin mới có thể hủy đơn).</p>
+                    <p>• <b>Thanh toán:</b> Đổi sang <b>"Đã TT"</b> để hệ thống update công nợ (không thể hủy đơn).</p>
                   </div>
                 </div>
 
