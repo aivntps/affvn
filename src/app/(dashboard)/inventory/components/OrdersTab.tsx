@@ -2,6 +2,7 @@ import React from 'react';
 import { Search, Filter } from 'lucide-react';
 import { Order } from '../types';
 import { formatCurrency } from '../utils';
+import { useGlobalData } from '@/lib/store/GlobalContext';
 
 interface OrdersTabProps {
   orders: Order[];
@@ -11,6 +12,8 @@ interface OrdersTabProps {
 }
 
 export function OrdersTab({ orders, setEditingPO, setIsReceivingStock, setInitialPoId }: OrdersTabProps) {
+  const { inventory } = useGlobalData();
+
   return (
     <div className="flex flex-col space-y-6 flex-1">
       <div className="flex flex-col sm:flex-row gap-3">
@@ -36,7 +39,7 @@ export function OrdersTab({ orders, setEditingPO, setIsReceivingStock, setInitia
                 <th className="px-6 py-4">Mã đơn</th>
                 <th className="px-6 py-4">Nhà cung cấp</th>
                 <th className="px-6 py-4">Số lượng</th>
-                <th className="px-6 py-4">Quy cách</th>
+                <th className="px-6 py-4">Sản phẩm</th>
                 <th className="px-6 py-4">Tổng tiền</th>
                 <th className="px-6 py-4">Ngày tạo</th>
                 <th className="px-6 py-4">Trạng thái</th>
@@ -54,8 +57,29 @@ export function OrdersTab({ orders, setEditingPO, setIsReceivingStock, setInitia
                   </td>
                   <td className="px-6 py-4 text-gray-900 font-medium">{order.supplier}</td>
                   <td className="px-6 py-4 font-bold text-gray-900">{order.qty}</td>
-                  <td className="px-6 py-4 text-gray-500 italic text-xs max-w-[200px] truncate" title={order.spec}>
-                    {order.spec}
+                  <td className="px-6 py-4 text-gray-500 italic text-xs max-w-[250px]">
+                    {(() => {
+                      if (!order.items || order.items.length === 0) return order.spec || '-';
+                      
+                      // Find item with highest qty
+                      const sortedItems = [...order.items].sort((a, b) => b.qty - a.qty);
+                      const mainItem = sortedItems[0];
+                      const productInfo = inventory.find(p => p.sku === mainItem.productId);
+                      const displayName = productInfo ? productInfo.name : mainItem.productId;
+                      
+                      return (
+                        <div className="flex flex-col">
+                          <span className="text-gray-900 font-medium not-italic truncate" title={displayName}>
+                            {displayName}
+                          </span>
+                          {order.items.length > 1 && (
+                            <span className="text-gray-400 font-normal mt-0.5">
+                               và {order.items.length - 1} sản phẩm khác
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4 text-gray-600 font-medium">{formatCurrency(order.price)}</td>
                   <td className="px-6 py-4 text-gray-500">{order.date}</td>

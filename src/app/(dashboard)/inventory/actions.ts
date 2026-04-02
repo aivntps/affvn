@@ -202,7 +202,20 @@ export async function savePurchaseOrderAction(po: any) {
 export async function addProductAction(p: any) {
   try {
     const supabase = await createClient()
-    const dbP = { sku: p.sku, name: p.name, category: p.category, brand: p.brand, cost: p.cost, price: p.price, retail_price: p.retailPrice, stock: p.stock, spec: p.spec, status: p.status }
+    const dbP = { 
+      sku: p.sku, 
+      name: p.name, 
+      category: p.category, 
+      brand: p.brand, 
+      cost: p.cost, 
+      price: p.price, 
+      retail_price: p.retailPrice, 
+      stock: p.stock, 
+      spec: p.spec, 
+      status: p.status,
+      storage_unit: p.storageUnit,
+      conversion_rate: p.conversionRate
+    }
     const { error } = await supabase.from('inventory').insert(dbP)
     if (error) {
        await logActivityAction(`Thêm sản phẩm mới SKU-${p.sku}`, 'Thất bại');
@@ -238,7 +251,20 @@ export async function addProductAction(p: any) {
 export async function updateProductAction(p: any) {
   try {
     const supabase = await createClient()
-    const dbP = { sku: p.sku, name: p.name, category: p.category, brand: p.brand, cost: p.cost, price: p.price, retail_price: p.retailPrice, stock: p.stock, spec: p.spec, status: p.status }
+    const dbP = { 
+      sku: p.sku, 
+      name: p.name, 
+      category: p.category, 
+      brand: p.brand, 
+      cost: p.cost, 
+      price: p.price, 
+      retail_price: p.retailPrice, 
+      stock: p.stock, 
+      spec: p.spec, 
+      status: p.status,
+      storage_unit: p.storageUnit,
+      conversion_rate: p.conversionRate
+    }
     const { error } = await supabase.from('inventory').update(dbP).eq('sku', p.sku)
     if (error) {
        await logActivityAction(`Cập nhật thông tin sản phẩm SKU-${p.sku}`, 'Thất bại');
