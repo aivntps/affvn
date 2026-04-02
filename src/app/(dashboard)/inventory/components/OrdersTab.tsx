@@ -57,11 +57,10 @@ export function OrdersTab({ orders, setEditingPO, setIsReceivingStock, setInitia
                   </td>
                   <td className="px-6 py-4 text-gray-900 font-medium">{order.supplier}</td>
                   <td className="px-6 py-4 font-bold text-gray-900">{order.qty}</td>
-                  <td className="px-6 py-4 text-gray-500 italic text-xs max-w-[250px]">
+                  <td className="px-6 py-4 text-sm max-w-[300px]">
                     {(() => {
-                      if (!order.items || order.items.length === 0) return order.spec || '-';
+                      if (!order.items || order.items.length === 0) return <span className="text-gray-500 italic">{order.spec || '-'}</span>;
                       
-                      // Find item with highest qty
                       const sortedItems = [...order.items].sort((a, b) => b.qty - a.qty);
                       const mainItem = sortedItems[0];
                       const productInfo = inventory.find(p => p.sku === mainItem.productId);
@@ -69,11 +68,11 @@ export function OrdersTab({ orders, setEditingPO, setIsReceivingStock, setInitia
                       
                       return (
                         <div className="flex flex-col">
-                          <span className="text-gray-900 font-medium not-italic truncate" title={displayName}>
+                          <span className="text-gray-900 font-semibold truncate leading-normal" title={displayName}>
                             {displayName}
                           </span>
                           {order.items.length > 1 && (
-                            <span className="text-gray-400 font-normal mt-0.5">
+                            <span className="text-[12px] text-gray-400 font-normal leading-relaxed">
                                và {order.items.length - 1} sản phẩm khác
                             </span>
                           )}
