@@ -101,6 +101,7 @@ export default function CreateOrderModal({
   const [paymentDate, setPaymentDate] = useState(initialOrder?.paymentDate || "");
   const [selectedProductId, setSelectedProductId] = useState("");
   const [qty, setQty] = useState<number | "">(1);
+  const [price, setPrice] = useState<number | "">("");
   const [items, setItems] = useState<SaleOrderItem[]>(initialOrder?.items || []);
 
   const qtyInputRef = useRef<HTMLInputElement>(null);
@@ -112,6 +113,10 @@ export default function CreateOrderModal({
   const handleProductChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setSelectedProductId(val);
+    const prod = products.find(p => p.sku === val);
+    if (prod) {
+      setPrice(prod.retailPrice || prod.price);
+    }
     if (val) {
       setTimeout(() => {
         if (qtyInputRef.current) {
@@ -129,6 +134,11 @@ export default function CreateOrderModal({
     const finalQty = Number(qty) || 1;
     if (finalQty <= 0) return;
 
+    let finalPrice = Number(price);
+    if (isNaN(finalPrice) || finalPrice <= 0) {
+       finalPrice = currentProduct.retailPrice || currentProduct.price;
+    }
+
     const existing = items.find(i => i.productId === currentProduct.sku);
     const totalRequestQty = existing ? existing.qty + finalQty : finalQty;
 
@@ -138,18 +148,19 @@ export default function CreateOrderModal({
     }
 
     if (existing) {
-      setItems(items.map(i => i.productId === currentProduct.sku ? { ...i, qty: i.qty + finalQty } : i));
+      setItems(items.map(i => i.productId === currentProduct.sku ? { ...i, qty: i.qty + finalQty, price: finalPrice } : i));
     } else {
       setItems([...items, {
         productId: currentProduct.sku,
         name: currentProduct.name,
         qty: finalQty,
-        price: currentProduct.retailPrice || currentProduct.price
+        price: finalPrice
       }]);
     }
 
     setSelectedProductId("");
     setQty(1);
+    setPrice("");
   };
 
   const handleRemoveItem = (id: string) => {
@@ -300,30 +311,43 @@ export default function CreateOrderModal({
                 </select>
               </div>
 
-              <div>
-                 <label className="block text-sm font-medium text-gray-700 mb-1">Số lượng</label>
-                 <div className="flex gap-3">
+              <div className="flex gap-3">
+                 <div className="flex-1">
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Đơn giá (VNĐ)</label>
                    <input 
                      type="number" 
-                     min="1"
-                     ref={qtyInputRef}
-                     value={qty}
-                     onChange={e => setQty(e.target.value ? Number(e.target.value) : "")}
-                     onKeyDown={e => {
-                       if (e.key === "Enter") {
-                         e.preventDefault();
-                         handleAddItem();
-                       }
-                     }}
+                     min="0"
+                     value={price}
+                     onChange={e => setPrice(e.target.value ? Number(e.target.value) : "")}
+                     placeholder="Nhập đơn giá bán..."
                      className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
                    />
-                   <button 
-                     onClick={handleAddItem}
-                     disabled={!selectedProductId}
-                     className="px-6 py-2 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-sm font-medium hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                   >
-                     Thêm
-                   </button>
+                 </div>
+                 <div className="w-1/3">
+                   <label className="block text-sm font-medium text-gray-700 mb-1">Số lượng</label>
+                   <div className="flex gap-2">
+                     <input 
+                       type="number" 
+                       min="1"
+                       ref={qtyInputRef}
+                       value={qty}
+                       onChange={e => setQty(e.target.value ? Number(e.target.value) : "")}
+                       onKeyDown={e => {
+                         if (e.key === "Enter") {
+                           e.preventDefault();
+                           handleAddItem();
+                         }
+                       }}
+                       className="w-full px-4 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none" 
+                     />
+                     <button 
+                       onClick={handleAddItem}
+                       disabled={!selectedProductId}
+                       className="px-4 py-2 bg-gray-50 text-gray-600 border border-gray-200 rounded-lg text-sm font-medium hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                     >
+                       Thêm
+                     </button>
+                   </div>
                  </div>
               </div>
             </div>
