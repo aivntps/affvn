@@ -70,7 +70,7 @@ export default function OrdersPage() {
         id: s.id, customerId: s.customer_id, customerName: s.customer_name, customerType: s.customers?.type || 'N/A', customerRegion: s.customers?.region || 'N/A', customerPhone: s.customers?.phone || 'N/A', date: s.date, paymentDate: s.payment_date, total: Number(s.total), status: s.status as any, staffId: s.staff_id, staffName: s.staff_name,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         items: (s.sale_order_items || []).map((i: any) => ({
-          productId: i.product_id, productName: i.inventory?.name || 'Sản phẩm không xác định', quantity: i.qty, price: i.price,
+          productId: i.product_id, name: i.inventory?.name || 'Sản phẩm không xác định', qty: i.qty, price: i.price,
         }))
       }));
       setLocalOrders(formattedData);
