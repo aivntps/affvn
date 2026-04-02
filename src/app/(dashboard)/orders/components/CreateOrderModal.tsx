@@ -191,13 +191,13 @@ export default function CreateOrderModal({
       customerName: selectedCustomer.name,
       customerType: selectedCustomer.type,
       customerRegion: selectedCustomer.region,
-      date: new Date().toISOString().split("T")[0],
-      paymentDate: paymentDate || new Date().toISOString().split("T")[0],
+      date: initialOrder ? initialOrder.date : new Date().toISOString().split("T")[0],
+      paymentDate: paymentDate || (initialOrder ? initialOrder.paymentDate : new Date().toISOString().split("T")[0]),
       total: totalAmount,
-      status: "Chờ duyệt",
+      status: initialOrder ? initialOrder.status : "Chờ duyệt",
       items,
-      staffId: user?.id || "STAFF-01",
-      staffName: user?.ho_ten || "Nhân viên Sale"
+      staffId: initialOrder ? initialOrder.staffId : (user?.id || "STAFF-01"),
+      staffName: initialOrder ? initialOrder.staffName : (user?.ho_ten || "Nhân viên Sale")
     });
   };
 
